@@ -1,0 +1,19 @@
+[
+    {
+        "type":"setting",
+        "quality":"orig"
+    },
+    {
+        "type":"music",
+        "name":"ロクデナシ「あやふや」 Rokudenashi - Ambiguous【Official Music Video】",
+        "cover":"ロクデナシ",
+        "original":"ロクデナシ",
+        "time":["lateNight"],
+        "signal":"0030",
+        "travel":false,
+        "travelOnly":false,
+        "weather":["Clear"],
+        "duration":220000,
+        "source":"https://www.youtube.com/watch?v=_63ShFaYFFw"
+    }
+]
