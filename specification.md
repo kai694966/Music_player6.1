@@ -107,4 +107,32 @@ SceneSelect(true/false)
 SceneSelectの範囲(0~24)現在の時刻±この時間の曲が流れる
 曲が終わってから次の曲まで(int:SECOND)
 曲が終わってから時報まで最小(int:SECOND)
-タイムゾーン(int:-12~12)
+タイムゾーン(+/-),(0~12)
+
+
+
+html構成
+JS
+時計
+class DB
+play(path)
+changeVolume()+.addEventListener()
+bgmのsetTimeout()
+timeSignalのsetTimeout()
+  playBeep()
+playByRandom()
+  getMusicByHour()
+  getMusicByPlayed()
+  getMusicByRecent(Future)Played()
+  getMusicByTimeToSignal()
+  chooseByRandom()
+天気を取得、表示する関数
+
+folderInput.addEventListener()
+  PlayedDBがなければ作る
+
+  audioJ.onended = videoJ.onended = () => {}
+    playByRandom()
+
+  audioM.onended = videoM.onended = () => {}
+    playByRandom()

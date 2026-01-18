@@ -174,7 +174,6 @@ def process_metadata_entry(db_track, index, total,type):
     save_track_to_db(track_data)
 
 def save_track_to_db(data):
-    """IDがあればUPDATE、なければINSERTする万能関数"""
     try:
         with psycopg2.connect(**config) as conn:
             with conn.cursor() as cur:
@@ -193,8 +192,7 @@ def save_track_to_db(data):
                             original=%s, 
                             registered=%s,
                             volume_offset=%s,
-                            source=%s,
-                            language=%s,
+                            language=%s
                         WHERE id=%s;
                     """
                     cur.execute(sql, (
@@ -209,15 +207,15 @@ def save_track_to_db(data):
                         data["original"],
                         data["registered"],
                         data["volume_offset"],
-                        data["source"],
                         data["language"],
+                        data["id"],
                     ))
                 else:
                     # INSERT処理 (もし新規ファイルから登録する場合用)
                     # ... 以前の register_track と同様の処理 ...
                     pass
                 conn.commit()
-                print("DB更新完了")
+                print("DB更新")
     except Exception as e:
         print(f"保存エラー: {e}")
 
