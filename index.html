@@ -17,7 +17,7 @@
 <br>
 <p id="folderLoad">folderLoad</p>
 
-<p id="clock">clock</p>
+<p id="clock"></p>
 
 <label for="volumeBar">音量</label>
 <input type="range" id="volumeBar" min="0" max="100" step="0.1" value="10">
@@ -29,29 +29,29 @@
 
 <p id="volume">volume</p>
 
-<input type="checkbox" id="sceneSelectCheckbox">
+<input type="checkbox" id="sceneSelectCheckbox" class="controlableAfterInput">
 <label for="sceneSelectCheckbox">SceneSelect</label>
 <br>
 
-<input type="number" min="0" max="12" value="0" id="sceneSelectRange">
+<input type="number" min="0" max="12" value="0" id="sceneSelectRange" class="controlableAfterInput">
 <label for="sceneSelectCheckbox">現在の時刻±この時間の曲が流れる</label>
 <br>
 
-<input type="number" min="0" max="3600" value="60" id="betweenSong">
+<input type="number" min="0" max="3600" value="60" id="betweenSong" class="controlableAfterInput">
 <label for="betweenSong">曲が終わってから次の曲が再生されるまで</label>
 <br>
 
-<input type="number" min="-12" max="12" value="9" id="timeZone">
+<input type="number" min="-12" max="12" value="9" id="timeZone" class="controlableAfterInput">
 <label for="timeZone">タイムゾーン(UTC)</label>
 <br>
 
-<input type="checkbox" id="apiCheckbox">
+<input type="checkbox" id="apiCheckbox" class="controlableAfterInput">
 <label for="apiCheckbox">🌐︎</label>
 <br>
 
 <button id="startButton">開始</button>
 
-<p id="nowPlaying" style="font-weight: bold;">nowPlaying</p>
+<p id="nowPlaying" style="font-weight: bold;" class="showAfterStarted">nowPlaying</p>
 
 <audio id="audioPlayerM" controls style="display:none;">audioM</audio>
 <video id="videoPlayerM" controls width="480" style="display:none;">videoM</video>
@@ -66,7 +66,7 @@
 
 
 
-<button onclick="fileDialog.showModal()" >動画/音声のプロパティを表示</button>
+<button onclick="fileDialog.showModal()" class="showAfterStarted">動画/音声のプロパティを表示</button>
 
 <dialog id="fileDialog">
     <h2 id="nameDialog">title:</h2>
@@ -81,27 +81,10 @@
     <p id="source">source:</p>
 
     <button onclick="fileDialog.close()" class="showAfterStarted">close</button>
-
-    <button onclick="start()">開始</button>
 </dialog>
-
-
 
     </body>
 
-    <script>
-
-const folderInput = document.getElementById("folderInput")//ファイルを入力するところ
-
-folderInput.addEventListener("input",async function() {
-
-    document.querySelectorAll(".showAfterInput").forEach(element => {
-        element.style.display = "block";
-    })
-
-})
-
-    </script>
     <style>
 
 dialog {
@@ -125,4 +108,140 @@ dialog::backdrop {
 
 
     </style>
+
+    <script>
+
+const folderInput = document.getElementById("folderInput")//ファイルを入力するところ
+const startButton = document.getElementById("startButton")//開始ボタン
+const clock = document.getElementById("clock")
+
+/*プロパティのShow/Hide/Disabled*/
+function hide() {
+    document.querySelectorAll(".showAfterInput").forEach(element => {
+        console.debug("display=none")
+        element.style.display = "none";
+    })
+    
+    document.querySelectorAll(".showAfterStarted").forEach(element => {
+        element.style.display = "none"
+    })
+
+    document.querySelectorAll(".controlableAfterInput").forEach(element => {
+        console.debug("disabled=true")
+        element.disabled = true;
+    })
+}
+
+function showAfterInput() {
+
+    document.querySelectorAll(".showAfterInput").forEach(element => {
+        console.debug("display=block")
+        element.style.display = "block";
+    })
+
+    document.querySelectorAll(".controlableAfterInput").forEach(element=>{
+        console.debug("disabled=false")
+        element.disabled = false;
+    })
+}
+
+function showAfterstarted() {
+    document.querySelectorAll(".showAfterStarted").forEach(element => {
+        element.style.display = "block"
+    })
+}
+
+startButton.addEventListener("click",showAfterstarted)
+
+document.addEventListener("DOMContentLoaded",function() {
+    hide()
+})
+/**/
+
+/*時計*/
+function updateClock() {
+    let time = new Date()
+    let days = ["日","月","火","水","木","金","土"]
+    let year = time.getFullYear()
+    let month = time.getMonth()+1
+    let date = time.getDate()
+    let day = days[time.getDay()]
+    let hour = time.getHours()
+    let minute = time.getMinutes()
+    let second = time.getSeconds()
+    let mSecond = time.getMilliseconds()
+    clock.innerHTML = `${year}年 ${month}月 ${date}日（${day}） ${hour}:${minute}:${second}:${mSecond}`
+}
+
+document.addEventListener("DOMContentLoaded",function() {
+    const id = setInterval(() => {updateClock()},1000)
+})
+/**/
+
+/*Class DB*/
+
+class DB{
+    constructor(dbname,dbversion,objectStore,keyPath) {
+        this.dbname = dbname
+        this.dbversion = dbversion
+        this.objectStore = objectStore
+        this.keyPath = keyPath
+    }
+
+    openDB() {
+        return new Promise((resolve, reject) => {
+        const request = indexedDB.open(this.dbname,this.dbversion);/*名前、バージョンを指定してDBに接続*/
+        request.onupgradeneeded = function(event) {/*接続したときの初期化等の処理*/
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(this.objectStore)) {/*オブジェクトストアにplayedの名前が含まれないとき*/
+                db.createObjectStore(this.objectStore, { keyPath: this.keyPath });/*ハッシュ、keyPath*/
+            }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+        });
+    }
+
+
+    async savePlayed(db, name, played) {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(this.objectStore, "readwrite");
+            const store = tx.objectStore(this.objectStore);
+            store.put({ name, played});
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
+    }
+
+
+    async getPlayed(db, name) {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(this.objectStore, "readonly");
+            const store = tx.objectStore(this.objectStore);
+            const request = store.get(name);
+            request.onsuccess = () => {
+                const record = request.result;
+                if (record) {
+                    resolve({
+                        played: record.played ?? 0
+                    }); // キャッシュが有効
+                } else {
+                    resolve(null); // キャッシュなし or 更新されている
+                }
+            };
+
+            request.onerror = () => reject(request.error);
+        });
+    }
+}
+
+folderInput.addEventListener("input",async function() {
+
+    showAfterInput()
+
+    
+
+})
+
+    </script>
 </html>
