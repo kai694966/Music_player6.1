@@ -73,11 +73,12 @@ PRIMARY_KEY
 
 
 
+InputFolder\Setttings.json ユーザーの同意のうえで書き換え可能
+           \Statics.json web上では書き換え不可能
+           \music\~~
 
 
-
-
-Statics.json
+Settings.json
 "type"="setting"のとき
 quality:"orig","p480","audio"
 
@@ -88,7 +89,7 @@ betweenSongs:int[s]
 betweenSignal:int[s]
 timezone:int
 
-
+Statics.json
 type="music"のとき
 "name":pathの最後の部分から拡張子を除いた
 "cover"
@@ -108,6 +109,11 @@ SceneSelectの範囲(0~24)現在の時刻±この時間の曲が流れる
 曲が終わってから次の曲まで(int:SECOND)
 曲が終わってから時報まで最小(int:SECOND)
 タイムゾーン(+/-),(0~12)
+
+IndexedDBに保存する内容
+音楽ファイルがあるPath
+filePlayed
+
 
 
 
@@ -136,3 +142,13 @@ folderInput.addEventListener()
 
   audioM.onended = videoM.onended = () => {}
     playByRandom()
+
+
+
+
+ページの読み込みが完了する ->時計を表示
+ファイルを読み込むというボタンを押す
+もしIndexedDBにパスが保存されていなければパスを指定させる
+IndexedDBに保存されているパスをもとに設定、メタデータ、音楽ファイルを読み込む
+設定を変更、保存する要素を表示
+再生ボタンを押す->ランダムに再生

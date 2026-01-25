@@ -12,7 +12,7 @@
 
 <p>v6.1</p>
 
-<input type="file" id="folderInput" webkitdirectory directory>
+<button id="readFolder">ファイルを読み込む</button>
 
 <br>
 <p id="folderLoad">folderLoad</p>
@@ -29,20 +29,28 @@
 
 <p id="volume">volume</p>
 
+<button onclick="settingDialog.showModal()" class="showAfterInput">設定</button>
+
+<dialog id="settingDialog">
+    <input type="number" min="0" max="12" value="0" id="sceneSelectRange" class="controlableAfterInput">
+    <label for="sceneSelectCheckbox">現在の時刻±この時間の曲が流れる</label>
+    <br>
+
+    <input type="number" min="0" max="3600" value="60" id="betweenSong" class="controlableAfterInput">
+    <label for="betweenSong">曲が終わってから次の曲が再生されるまで</label>
+    <br>
+
+    <input type="number" min="-12" max="12" value="9" id="timeZone" class="controlableAfterInput">
+    <label for="timeZone">タイムゾーン(UTC)</label>
+    <br>
+
+    <button onclick="saveSetting()">保存</button>
+    <button onclick="settingDialog.close()">close</button>
+</dialog>
+<br>
+
 <input type="checkbox" id="sceneSelectCheckbox" class="controlableAfterInput">
 <label for="sceneSelectCheckbox">SceneSelect</label>
-<br>
-
-<input type="number" min="0" max="12" value="0" id="sceneSelectRange" class="controlableAfterInput">
-<label for="sceneSelectCheckbox">現在の時刻±この時間の曲が流れる</label>
-<br>
-
-<input type="number" min="0" max="3600" value="60" id="betweenSong" class="controlableAfterInput">
-<label for="betweenSong">曲が終わってから次の曲が再生されるまで</label>
-<br>
-
-<input type="number" min="-12" max="12" value="9" id="timeZone" class="controlableAfterInput">
-<label for="timeZone">タイムゾーン(UTC)</label>
 <br>
 
 <input type="checkbox" id="apiCheckbox" class="controlableAfterInput">
@@ -114,11 +122,12 @@ dialog::backdrop {
 const folderInput = document.getElementById("folderInput")//ファイルを入力するところ
 const startButton = document.getElementById("startButton")//開始ボタン
 const clock = document.getElementById("clock")
+const readFolder = document.getElementById("readFolder")
+const timezoneInput = document.getElementById("timeZone")
 
 /*プロパティのShow/Hide/Disabled*/
 function hide() {
     document.querySelectorAll(".showAfterInput").forEach(element => {
-        console.debug("display=none")
         element.style.display = "none";
     })
     
@@ -127,7 +136,6 @@ function hide() {
     })
 
     document.querySelectorAll(".controlableAfterInput").forEach(element => {
-        console.debug("disabled=true")
         element.disabled = true;
     })
 }
@@ -135,12 +143,10 @@ function hide() {
 function showAfterInput() {
 
     document.querySelectorAll(".showAfterInput").forEach(element => {
-        console.debug("display=block")
         element.style.display = "block";
     })
 
     document.querySelectorAll(".controlableAfterInput").forEach(element=>{
-        console.debug("disabled=false")
         element.disabled = false;
     })
 }
@@ -159,8 +165,19 @@ document.addEventListener("DOMContentLoaded",function() {
 /**/
 
 /*時計*/
+function newDate() {
+    return getTimeInTimezone(Number(timezoneInput.value))
+}
+
+function getTimeInTimezone(utcOffset) {
+    const now = new Date();
+    const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const targetTime = new Date(utcTime + (3600000 * utcOffset));
+    return targetTime;
+}
+
 function updateClock() {
-    let time = new Date()
+    let time = newDate()
     let days = ["日","月","火","水","木","金","土"]
     let year = time.getFullYear()
     let month = time.getMonth()+1
@@ -170,13 +187,41 @@ function updateClock() {
     let minute = time.getMinutes()
     let second = time.getSeconds()
     let mSecond = time.getMilliseconds()
-    clock.innerHTML = `${year}年 ${month}月 ${date}日（${day}） ${hour}:${minute}:${second}:${mSecond}`
+    let utcString = String(timezoneInput.value)
+    if (0<utcString) {utcString = "+"+utcString}
+    clock.innerHTML = `${year}年 ${month}月 ${date}日（${day}） ${hour}:${minute}:${second}:${mSecond} UTC${utcString}`
 }
 
 document.addEventListener("DOMContentLoaded",function() {
     const id = setInterval(() => {updateClock()},1000)
 })
 /**/
+
+/*ファイルの読み込み*/
+readFolder.addEventListener("click",async function() {
+    const filePathDB = await new DB("MusicPlayerDB_61",1,"InputFolderPath","path").init()
+    const path = await filePathDB.getData("filePath")
+    if (path === null) {
+        await getPathOfInputFolder()
+    }
+})
+
+async function getPathOfInputFolder() {
+    try {
+        const dirHandle = await window.showDirectoryPicker();
+
+        for await (const entry of dirHandle.values()) {
+            if (entry.kind === "file") {
+                const file = await entry.getFile();
+                console.log(file.name)
+            }
+        }
+    } catch (e) {
+        console.log(`エラー:${e}`)
+    }
+}
+/**/
+
 
 /*Class DB*/
 
@@ -186,12 +231,20 @@ class DB{
         this.dbversion = dbversion
         this.objectStore = objectStore
         this.keyPath = keyPath
+        this.db = null
+    }
+
+    async init() {
+
+
+        this.db = await this.openDB();
+        return this
     }
 
     openDB() {
         return new Promise((resolve, reject) => {
         const request = indexedDB.open(this.dbname,this.dbversion);/*名前、バージョンを指定してDBに接続*/
-        request.onupgradeneeded = function(event) {/*接続したときの初期化等の処理*/
+        request.onupgradeneeded = (event) => {/*接続したときの初期化等の処理*/
             const db = event.target.result;
             if (!db.objectStoreNames.contains(this.objectStore)) {/*オブジェクトストアにplayedの名前が含まれないとき*/
                 db.createObjectStore(this.objectStore, { keyPath: this.keyPath });/*ハッシュ、keyPath*/
@@ -203,28 +256,28 @@ class DB{
     }
 
 
-    async savePlayed(db, name, played) {
+    async saveData(name, data) {
         return new Promise((resolve, reject) => {
-            const tx = db.transaction(this.objectStore, "readwrite");
+            const tx = this.db.transaction(this.objectStore, "readwrite");
             const store = tx.objectStore(this.objectStore);
-            store.put({ name, played});
+            store.put({ name, data});
             tx.oncomplete = () => resolve();
             tx.onerror = () => reject(tx.error);
         });
     }
 
 
-    async getPlayed(db, name) {
+    async getData(name) {
         return new Promise((resolve, reject) => {
-            const tx = db.transaction(this.objectStore, "readonly");
+            const tx = this.db.transaction(this.objectStore, "readonly");
             const store = tx.objectStore(this.objectStore);
             const request = store.get(name);
             request.onsuccess = () => {
                 const record = request.result;
                 if (record) {
-                    resolve({
-                        played: record.played ?? 0
-                    }); // キャッシュが有効
+                    resolve(
+                        record.data
+                    ); // キャッシュが有効
                 } else {
                     resolve(null); // キャッシュなし or 更新されている
                 }
@@ -234,14 +287,42 @@ class DB{
         });
     }
 }
+/**/
 
+function saveSetting() {
+
+}
+
+
+/*
 folderInput.addEventListener("input",async function() {
 
     showAfterInput()
 
+    event.target.filesからfiles,paths,namesを作る
+    const files = event.target.files
+
+    let temp = []
+    for (const data of files) {
+        temp.push(data.webkitRelativePath)
+    }
+    const paths = temp
+
+    temp = []
+    paths.forEach(path => {
+        temp.push(path.split(/[/\\]/).pop().replace(/\.[^.]+$/,''))
+    })
+    const names = temp
     
 
+
+    
+
+
+
 })
+*/
+
 
     </script>
 </html>
