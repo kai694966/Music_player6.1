@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8">
         <meta name="theme-color content=#0080ff">
-        <link rel="manifest" href="manifest.json">
+        <!--<link rel="manifest" href="manifest.json">-->
         <link rel="icon" href="favicon.ico" type="image/x-icon">
         <meta name="viewport" content="width=device-width,initial-scale=1.0">
     </head>
@@ -199,23 +199,22 @@ document.addEventListener("DOMContentLoaded",function() {
 
 /*ファイルの読み込み*/
 readFolder.addEventListener("click",async function() {
-    const filePathDB = await new DB("MusicPlayerDB_61",1,"InputFolderPath","path").init()
+    const filePathDB = await new DB("MusicPlayerDB_61",1,"InputFolderPath","name").init()
     const path = await filePathDB.getData("filePath")
     if (path === null) {
-        await getPathOfInputFolder()
+        await getPathOfInputFolder(filePathDB)
     }
 })
 
-async function getPathOfInputFolder() {
+async function getPathOfInputFolder(filePathDB) {
     try {
-        const dirHandle = await window.showDirectoryPicker();
+        const dirHandle = await window.showDirectoryPicker()
 
-        for await (const entry of dirHandle.values()) {
-            if (entry.kind === "file") {
-                const file = await entry.getFile();
-                console.log(file.name)
-            }
-        }
+        await filePathDB.saveData("folderHandle",dirHandle)
+
+        document.getElementById("folderLoad").innerText = `読み込み完了:${dirHandle.name}`
+
+        showAfterInput()
     } catch (e) {
         console.log(`エラー:${e}`)
     }
@@ -289,7 +288,7 @@ class DB{
 }
 /**/
 
-function saveSetting() {
+function savePathOfIndexFolder() {
 
 }
 
