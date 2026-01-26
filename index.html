@@ -13,6 +13,7 @@
 <p>v6.1</p>
 
 <button id="readFolder">ファイルを読み込む</button>
+<button id="selectFolder">読み込み先:</button>
 
 <br>
 <p id="folderLoad">folderLoad</p>
@@ -198,13 +199,70 @@ document.addEventListener("DOMContentLoaded",function() {
 /**/
 
 /*ファイルの読み込み*/
-readFolder.addEventListener("click",async function() {
-    const filePathDB = await new DB("MusicPlayerDB_61",1,"InputFolderPath","name").init()
-    const path = await filePathDB.getData("filePath")
-    if (path === null) {
-        await getPathOfInputFolder(filePathDB)
+document.addEventListener("DOMContentLoaded",async function() {
+    const InputFolderPathDB = new DB("MusicPlayerDB_61",1,"InputFolderPath","path")
+    InputFolderPathDB.open()
+    const data = await InputFolderPathDB.get("folderHandle")
+    document.getElementById("selectFolder").innerText = data || "フォルダを選択"
+})
+
+document.getElementById("selectFolder").addEventListener("click",async function() {
+    try {
+        const dirHandle = await window.showDirectoryPicker()
+
+        const InputFolderPathDB = new DB("MusicPlayerDB_61",1,"InputFolderPath","path")
+        await InputFolderPathDB.save({
+            path: "folderHandle",
+            handle: dirHandle,
+            name: dirHandle.name,
+        })
+
+        document.getElementById("selectFolder").innerText = dirHandle.name
+        document.getElementById("folderLoad").innerText = `読み込み完了:${dirHandle.name}`
+
+        showAfterInput()
+    } catch (e) {
+        console.log(`エラー:${e}`)
     }
 })
+
+readFolder.addEventListener("click",async function() {
+    const InputFolderPathDB = new DB("MusicPlayerDB_61",1,"InputFolderPath","path")
+    InputFolderPathDB.open()
+    const data = await InputFolderPathDB.get("folderHandle")
+
+    if (data && data.handle) {
+        const permission = await data.handle.queryPermission({mode: "read" })
+
+        if (permission === "granted" || await data.handle.requestPermission({mode: "read" }) === "granted") {
+            const files = await getAllFiles(data.handle);
+            console.log(files)
+        }
+    }
+
+})
+
+async function getAllFiles(dirHandle, path = '') {
+    const files = [];
+    
+    for await (const entry of dirHandle.values()) {
+        const newPath = path ? `${path}/${entry.name}` : entry.name;
+        
+        if (entry.kind === 'file') {
+            const file = await entry.getFile();
+            Object.defineProperty(file, 'relativePath', {
+                value: newPath,
+                writable: false
+            });
+            files.push(file);
+        } else if (entry.kind === 'directory') {
+            const subFiles = await getAllFiles(entry, newPath);
+            files.push(...subFiles);
+        }
+    }
+    
+    return files;
+}
 
 async function getPathOfInputFolder(filePathDB) {
     try {
@@ -225,66 +283,80 @@ async function getPathOfInputFolder(filePathDB) {
 /*Class DB*/
 
 class DB{
-    constructor(dbname,dbversion,objectStore,keyPath) {
-        this.dbname = dbname
-        this.dbversion = dbversion
-        this.objectStore = objectStore
-        this.keyPath = keyPath
-        this.db = null
+    constructor(dbName, dbVersion, objectStore, keyPath) {
+        this.dbName = dbName;
+        this.dbVersion = dbVersion;
+        this.objectStoreName = objectStore;
+        this.keyPath = keyPath;
+        this.db = null;
     }
 
-    async init() {
+    async open() {
+        return new Promise((resolve,reject) => {
+            const request = indexedDB.open(this.dbName,this.dbVersion);
 
-
-        this.db = await this.openDB();
-        return this
-    }
-
-    openDB() {
-        return new Promise((resolve, reject) => {
-        const request = indexedDB.open(this.dbname,this.dbversion);/*名前、バージョンを指定してDBに接続*/
-        request.onupgradeneeded = (event) => {/*接続したときの初期化等の処理*/
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains(this.objectStore)) {/*オブジェクトストアにplayedの名前が含まれないとき*/
-                db.createObjectStore(this.objectStore, { keyPath: this.keyPath });/*ハッシュ、keyPath*/
-            }
-        };
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-        });
-    }
-
-
-    async saveData(name, data) {
-        return new Promise((resolve, reject) => {
-            const tx = this.db.transaction(this.objectStore, "readwrite");
-            const store = tx.objectStore(this.objectStore);
-            store.put({ name, data});
-            tx.oncomplete = () => resolve();
-            tx.onerror = () => reject(tx.error);
-        });
-    }
-
-
-    async getData(name) {
-        return new Promise((resolve, reject) => {
-            const tx = this.db.transaction(this.objectStore, "readonly");
-            const store = tx.objectStore(this.objectStore);
-            const request = store.get(name);
-            request.onsuccess = () => {
-                const record = request.result;
-                if (record) {
-                    resolve(
-                        record.data
-                    ); // キャッシュが有効
-                } else {
-                    resolve(null); // キャッシュなし or 更新されている
-                }
+            request.onerror = () => {
+                reject(new Error("Database failed to open"))
             };
 
-            request.onerror = () => reject(request.error);
+            request.onsuccess = (event) => {
+                this.db = event.target.result;
+                resolve(this.db);
+            };
+
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+
+                if (!db.objectStoreNames.contains(this.objectStoreName)) {
+                    db.createObjectStore(this.objectStoreName,{keyPath:this.keyPath})
+                }
+            }
+        })
+    }
+
+    async save(data) {
+        if (!this.db) {
+            await this.open();
+        }
+
+        return new Promise((resolve,reject) => {
+            const transaction = this.db.transaction([this.objectStoreName],"readwrite");
+            const store = transaction.objectStore(this.objectStoreName);
+            const request = store.put(data);
+
+            request.onsuccess = () => {
+                resolve(request.result);
+            }
+
+            request.onerror = () => {
+                reject(new Error("Failed to save data"))
+            };
         });
     }
+
+    async get(key) {
+        if (!this.db) {
+            await this.open()
+        }
+
+        return new Promise((resolve,reject) => {
+            const transaction = this.db.transaction([this.objectStoreName],"readonly");
+            const store = transaction.objectStore(this.objectStoreName);
+            const request = store.get(key);
+
+            request.onsuccess = () => {
+                resolve(request.result);
+            }
+
+            request.onerror = () => {
+                reject(new Error("Failed to get data"));
+            }
+        })
+    }
+
+
+
+    
 }
 /**/
 
