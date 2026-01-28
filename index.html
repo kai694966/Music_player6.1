@@ -126,6 +126,8 @@ const clock = document.getElementById("clock")
 const readFolder = document.getElementById("readFolder")
 const timezoneInput = document.getElementById("timeZone")
 
+const globals = new Globals()
+
 /*プロパティのShow/Hide/Disabled*/
 function hide() {
     document.querySelectorAll(".showAfterInput").forEach(element => {
@@ -199,14 +201,14 @@ document.addEventListener("DOMContentLoaded",function() {
 /**/
 
 /*ファイルの読み込み*/
-document.addEventListener("DOMContentLoaded",async function() {
+document.addEventListener("DOMContentLoaded",async function() {/*ページを開いたときに読み込みボタンにパスを表示する*/
     const InputFolderPathDB = new DB("MusicPlayerDB_61",1,"InputFolderPath","path")
     InputFolderPathDB.open()
     const data = await InputFolderPathDB.get("folderHandle")
-    document.getElementById("selectFolder").innerText = data || "フォルダを選択"
+    document.getElementById("selectFolder").innerText = data.name || "フォルダを選択"
 })
 
-document.getElementById("selectFolder").addEventListener("click",async function() {
+document.getElementById("selectFolder").addEventListener("click",async function() {/*読み込みするファイルを設定*/
     try {
         const dirHandle = await window.showDirectoryPicker()
 
@@ -226,7 +228,7 @@ document.getElementById("selectFolder").addEventListener("click",async function(
     }
 })
 
-readFolder.addEventListener("click",async function() {
+readFolder.addEventListener("click",async function() {/*ファイルを読み込みボタンが押されたとき*/
     const InputFolderPathDB = new DB("MusicPlayerDB_61",1,"InputFolderPath","path")
     InputFolderPathDB.open()
     const data = await InputFolderPathDB.get("folderHandle")
@@ -237,6 +239,8 @@ readFolder.addEventListener("click",async function() {
         if (permission === "granted" || await data.handle.requestPermission({mode: "read" }) === "granted") {
             const files = await getAllFiles(data.handle);
             console.log(files)
+            globals.save("files",files)
+            const scatics = new Statics(files).load()
         }
     }
 
@@ -359,6 +363,40 @@ class DB{
     
 }
 /**/
+
+/*Class Statics*/
+class Statics {
+    constructor(files) {
+        this.files = files
+        this.staticsJson = this.files.find(file => file.name === "Statics.json")
+        this.settingsJson = this.files.find(file => file.name === "Settings.json")
+        console.log(this.staticsJson,this.settingsJson)
+    }
+
+    async load() {
+        const staticText = await this.staticsJson.text()
+        const settingText = await this.settingsJson.text()
+        this.statics = JSON.parse(staticText)
+        this.settings = JSON.parse(settingText)
+        console.log(this.statics,this.settings)
+    }
+}
+/**/
+
+/*Class Globals - グローバル変数を代わりに保存するクラス*/
+class Globals {
+    constructor() {
+        this.data = []
+    }
+
+    save(key,data) {
+        this.data.push({"key":key,"data":data})
+    }
+
+    get(key) {
+        return this.data.find(data => data.key === key).data
+    }
+}
 
 function savePathOfIndexFolder() {
 
