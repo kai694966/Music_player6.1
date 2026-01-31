@@ -33,6 +33,10 @@
 <button onclick="settingDialog.showModal()" class="showAfterInput">設定</button>
 
 <dialog id="settingDialog">
+    <input type="checkbox" id="sceneSelectBool">
+    <label for="sceneSelectBool">SceneSelect</label>
+    <br>
+
     <input type="number" min="0" max="12" value="0" id="sceneSelectRange" class="controlableAfterInput">
     <label for="sceneSelectCheckbox">現在の時刻±この時間の曲が流れる</label>
     <br>
@@ -46,6 +50,26 @@
     <br>
 
     <button onclick="saveSetting()">保存</button>
+    <br>
+
+    <br>
+
+    <input type="checkbox" id="weatherInternet">
+    <label for="weatherInternet">🌐︎ | 天気</label>
+    <select id="weatherInput" name="weather">
+        <option value="0">None</option>
+        <option value="1">Clear</option>
+        <option value="2">Clouds</option>
+        <option value="3">Rain</option>
+        <option value="4">Snow</option>
+    </select>
+    <br>
+
+    <input type="checkbox" id="speedInternet">
+    <label for="speedInternet">🌐︎ | 速度</label>
+    <input type="int">
+    <br>
+
     <button onclick="settingDialog.close()">close</button>
 </dialog>
 <br>
@@ -125,8 +149,6 @@ const startButton = document.getElementById("startButton")//開始ボタン
 const clock = document.getElementById("clock")
 const readFolder = document.getElementById("readFolder")
 const timezoneInput = document.getElementById("timeZone")
-
-const globals = new Globals()
 
 /*プロパティのShow/Hide/Disabled*/
 function hide() {
@@ -220,7 +242,6 @@ document.getElementById("selectFolder").addEventListener("click",async function(
         })
 
         document.getElementById("selectFolder").innerText = dirHandle.name
-        document.getElementById("folderLoad").innerText = `読み込み完了:${dirHandle.name}`
 
         showAfterInput()
     } catch (e) {
@@ -229,19 +250,26 @@ document.getElementById("selectFolder").addEventListener("click",async function(
 })
 
 readFolder.addEventListener("click",async function() {/*ファイルを読み込みボタンが押されたとき*/
-    const InputFolderPathDB = new DB("MusicPlayerDB_61",1,"InputFolderPath","path")
-    InputFolderPathDB.open()
-    const data = await InputFolderPathDB.get("folderHandle")
+    try {
+        const InputFolderPathDB = new DB("MusicPlayerDB_61",1,"InputFolderPath","path")
+        InputFolderPathDB.open()
+        const data = await InputFolderPathDB.get("folderHandle")
 
-    if (data && data.handle) {
-        const permission = await data.handle.queryPermission({mode: "read" })
+        if (data && data.handle) {
+            const permission = await data.handle.queryPermission({mode: "read" })
 
-        if (permission === "granted" || await data.handle.requestPermission({mode: "read" }) === "granted") {
-            const files = await getAllFiles(data.handle);
-            console.log(files)
-            globals.save("files",files)
-            const scatics = new Statics(files).load()
+            if (permission === "granted" || await data.handle.requestPermission({mode: "read" }) === "granted") {
+                const files = await getAllFiles(data.handle);
+                console.log(files)
+                globals.save("files",files)
+                const scatics = new Statics(files).load()
+                document.getElementById("folderLoad").innerText = `読み込み完了:${data.handle.name}`
+                showAfterInput()
+            }
         }
+    } catch (error) {
+        alert(`エラー:${error}\nフォルダが存在しない可能性があります`)
+        console.error(error)
     }
 
 })
@@ -378,7 +406,8 @@ class Statics {
         const settingText = await this.settingsJson.text()
         this.statics = JSON.parse(staticText)
         this.settings = JSON.parse(settingText)
-        console.log(this.statics,this.settings)
+
+
     }
 }
 /**/
@@ -397,6 +426,8 @@ class Globals {
         return this.data.find(data => data.key === key).data
     }
 }
+
+const globals = new Globals()
 
 function savePathOfIndexFolder() {
 
