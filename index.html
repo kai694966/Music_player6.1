@@ -260,9 +260,9 @@ readFolder.addEventListener("click",async function() {/*ファイルを読み込
 
             if (permission === "granted" || await data.handle.requestPermission({mode: "read" }) === "granted") {
                 const files = await getAllFiles(data.handle);
-                console.log(files)
                 globals.save("files",files)
                 const scatics = new Statics(files).load()
+                load(files)
                 document.getElementById("folderLoad").innerText = `読み込み完了:${data.handle.name}`
                 showAfterInput()
             }
@@ -307,6 +307,18 @@ async function getPathOfInputFolder(filePathDB) {
         showAfterInput()
     } catch (e) {
         console.log(`エラー:${e}`)
+    }
+}
+
+function load(files) {
+    for (const file of files) {
+        if (file.name === "Settings.json") {
+            statics.setSettings(file)
+        } else if (file.name === "Statics.json") {
+            statics.setStatics(file)
+        } else {
+            music.push(new Music(file))
+        }
     }
 }
 /**/
@@ -401,6 +413,14 @@ class Statics {
         console.log(this.staticsJson,this.settingsJson)
     }
 
+    setStatics(json) {
+        this.staticsJson = json
+    }
+
+    setSettings(json) {
+        this.settingsJson = json
+    }
+
     async load() {
         const staticText = await this.staticsJson.text()
         const settingText = await this.settingsJson.text()
@@ -427,7 +447,55 @@ class Globals {
     }
 }
 
+class Music {
+    constructor(json) {
+        this.json = json
+        this.type = json.type
+
+        if (this.type === "bgm") {
+            this.hour = json.hour
+        } else if (this.type = "music") {
+            this.path = json.path
+            this.name = json.name
+            this.cover = json.cover
+            this.original = json.original
+            this.time = json.time
+            this.signal = json.signal
+            this.travel = json.travel
+            this.travelOnly = json.travelOnly
+            this.weather = json.weather
+            this.registrated = json.registrated
+            this.duration = json.duration
+            this.source = json.source
+            this.language = json.language
+        }
+    }
+
+    setPlayed(played) {
+        this.played = played
+    }
+
+    setFile(file) {
+        this.file = file
+    }
+}
+
+class MusicManager {
+    constructor() {
+        this.musics = []
+    }
+
+    push(music) {
+        this.musics.push(music)
+    }
+
+
+}
+
 const globals = new Globals()
+
+const music = new MusicManager()
+const statics = new Statics()
 
 function savePathOfIndexFolder() {
 
