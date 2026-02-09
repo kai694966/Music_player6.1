@@ -16,7 +16,7 @@
 <button id="selectFolder">読み込み先:</button>
 
 <br>
-<p id="folderLoad">folderLoad</p>
+<p id="folderLoad">ファイルを読み込んでください</p>
 
 <p id="clock"></p>
 
@@ -30,26 +30,48 @@
 
 <p id="volume">volume</p>
 
-<button onclick="settingDialog.showModal()" class="showAfterInput">設定</button>
+<button onclick="settingDialog.showModal()" id="configSettings">設定</button>
 
 <dialog id="settingDialog">
     <input type="checkbox" id="sceneSelectBool">
     <label for="sceneSelectBool">SceneSelect</label>
     <br>
 
-    <input type="number" min="0" max="12" value="0" id="sceneSelectRange" class="controlableAfterInput">
-    <label for="sceneSelectCheckbox">現在の時刻±この時間の曲が流れる</label>
+    <input type="checkbox" id="timeSignalBool">
+    <label for="timeSignalBool">timeSignal</label>
     <br>
 
-    <input type="number" min="0" max="3600" value="60" id="betweenSong" class="controlableAfterInput">
-    <label for="betweenSong">曲が終わってから次の曲が再生されるまで</label>
+    <input type="checkbox" id="bgmBool">
+    <label for="bgmBool">BGM</label>
+    <br>
     <br>
 
-    <input type="number" min="-12" max="12" value="9" id="timeZone" class="controlableAfterInput">
-    <label for="timeZone">タイムゾーン(UTC)</label>
+    <input type="number" min="0" max="12" value="0" id="sceneSelectRange">
+    <label for="sceneSelectRange">時:現在の時刻±この時間の曲が流れる</label>
     <br>
 
-    <button onclick="saveSetting()">保存</button>
+    <input type="number" min="-12" max="12" value="9" id="timeZone">
+    <label for="timeZone">時:タイムゾーン(UTC)</label>
+    <br>
+
+    <input type="number" min="0" max="3600" value="60" id="betweenSong">
+    <label for="betweenSong">秒:曲が終わってから次の曲が再生されるまで</label>
+    <br>
+
+    <input type="number" min="0" max="3600" value="10" id="leastToSignal">
+    <label for="leastToSignal">秒:曲から時報までの最小</label>
+    <br>
+
+    <!--minPlayedから何回分まで許容するか、同じ曲が次現れるまでの長さ-->
+    <input type="number" min="0" max="100" value="0" id="leastPlayed">
+    <label for="leastPlayed">回:再生回数が最も少ないものから何回多いものまで許容するか</label>
+    <br>
+
+    <input type="number" min="0" max="300" value="30" id="timeBetweenPlay">
+    <label for="timeBetweenPlay">分:同じ曲を再生するときの間隔</label>
+    <br>
+
+    <button onclick="saveSetting()" id="saveSettingJson">保存</button>
     <br>
 
     <br>
@@ -67,24 +89,16 @@
 
     <input type="checkbox" id="speedInternet">
     <label for="speedInternet">🌐︎ | 速度</label>
-    <input type="int">
+    <input type="number" id="speedInput" min="0" max="2550" value="0">
     <br>
 
     <button onclick="settingDialog.close()">close</button>
 </dialog>
 <br>
 
-<input type="checkbox" id="sceneSelectCheckbox" class="controlableAfterInput">
-<label for="sceneSelectCheckbox">SceneSelect</label>
-<br>
-
-<input type="checkbox" id="apiCheckbox" class="controlableAfterInput">
-<label for="apiCheckbox">🌐︎</label>
-<br>
-
 <button id="startButton">開始</button>
 
-<p id="nowPlaying" style="font-weight: bold;" class="showAfterStarted">nowPlaying</p>
+<p id="nowPlaying" style="font-weight: bold;">nowPlaying</p>
 
 <audio id="audioPlayerM" controls style="display:none;">audioM</audio>
 <video id="videoPlayerM" controls width="480" style="display:none;">videoM</video>
@@ -95,11 +109,13 @@
 <audio id="audioPlayerB" controls style="display:none;">audioB</audio>
 <video id="videoPlayerB" controls width="480" style="display:none;">videoB</video>
 
+<audio id="SE_Audio" controls style="display: none;"></audio>
 
 
 
 
-<button onclick="fileDialog.showModal()" class="showAfterStarted">動画/音声のプロパティを表示</button>
+
+<button onclick="fileDialog.showModal()" id="showProperty">動画/音声のプロパティを表示</button>
 
 <dialog id="fileDialog">
     <h2 id="nameDialog">title:</h2>
@@ -113,7 +129,7 @@
     <p id="duration">duration:</p>
     <p id="source">source:</p>
 
-    <button onclick="fileDialog.close()" class="showAfterStarted">close</button>
+    <button onclick="fileDialog.close()">close</button>
 </dialog>
 
     </body>
@@ -150,6 +166,14 @@ const clock = document.getElementById("clock")
 const readFolder = document.getElementById("readFolder")
 const timezoneInput = document.getElementById("timeZone")
 
+const audioM = document.getElementById("audioPlayerM")
+const videoM = document.getElementById("videoPlayerM")
+const audioB = document.getElementById("audioPlayerB")
+const videoB = document.getElementById("videoPlayerB")
+const audioJ = document.getElementById("audioPlayerJ")
+const videoJ = document.getElementById("videoPlayerJ")
+const audioSE = document.getElementById("SE_Audio")
+
 /*プロパティのShow/Hide/Disabled*/
 function hide() {
     document.querySelectorAll(".showAfterInput").forEach(element => {
@@ -185,8 +209,104 @@ function showAfterstarted() {
 startButton.addEventListener("click",showAfterstarted)
 
 document.addEventListener("DOMContentLoaded",function() {
-    hide()
+    onDOMContentLoaded()
 })
+
+function onDOMContentLoaded() {
+    document.getElementById("volumeBar").disabled = true
+    document.getElementById("volumeInput").disabled = true
+    document.getElementById("muteCheckBox").disabled = true
+    document.getElementById("configSettings").style.display = "none"
+    document.getElementById("showProperty").style.display = "none"
+    document.getElementById("nowPlaying").style.display = "none"
+    document.getElementById("speedInternet").disabled = true
+    document.getElementById("weatherInternet").disabled = true
+    document.getElementById("startButton").disabled = true
+
+}
+
+function onFileLoaded() {
+    document.getElementById("readFolder").disabled = true
+    document.getElementById("selectFolder").disabled = true
+    document.getElementById("configSettings").style.display = "block"
+    document.getElementById("startButton").disabled = false
+
+}
+
+function onStarted() {
+    document.getElementById("volumeBar").disabled = false
+    document.getElementById("volumeInput").disabled = false
+    document.getElementById("muteCheckBox").disabled = false
+    document.getElementById("showProperty").style.display = "block"
+    document.getElementById("nowPlaying").style.display = "block"
+    document.getElementById("sceneSelectBool").disabled = true
+    document.getElementById("timeSignalBool").disabled = true
+    document.getElementById("bgmBool").disabled = true
+    document.getElementById("sceneSelectRange").disabled = true
+    document.getElementById("timeZone").disabled = true
+    document.getElementById("betweenSong").disabled = true
+    document.getElementById("leastToSignal").disabled = true
+    document.getElementById("leastPlayed").disabled = true
+    document.getElementById("timeBetweenPlay").disabled = true
+    document.getElementById("saveSettingJson").disabled = true
+
+
+}
+/**/
+
+/*jsonの保存*/
+async function saveSetting() {
+    const sceneSelectValue = document.getElementById("sceneSelectBool").checked
+    const timeSignalValue = document.getElementById("timeSignalBool").checked
+    const bgmValue = document.getElementById("bgmBool").checked
+
+    const sceneSelectRangeValue = document.getElementById("sceneSelectRange").value-0
+    const timeZoneValue = document.getElementById("timeZone").value-0
+    const betweenSongValue = document.getElementById("betweenSong").value*1000
+    const leastToSignalValue = document.getElementById("leastToSignal").value*1000
+    const leastPlayedValue = document.getElementById("leastPlayed").value
+    const timeBetweenPlayValue = document.getElementById("timeBetweenPlay").value
+
+
+
+    try {
+        const data = await db.get("InputFolderPath","path")
+
+        const settingsHandle = await data.handle.getFileHandle("Settings.json")
+
+        const writable = await settingsHandle.createWritable()
+
+        const jsonData = {
+            "sceneSelect":sceneSelectValue,
+            "timeSignal":timeSignalValue,
+            "bgm":bgmValue,
+            "sceneSelectRange":sceneSelectRangeValue,
+            "timezone":timeZoneValue,
+            "betweenSong":betweenSongValue,
+            "leastToSignal":leastToSignalValue,
+            "leastPlayed":leastPlayedValue,
+            "timeBetweenPlay":timeBetweenPlayValue
+        }
+
+
+        const jsonContent = JSON.stringify(jsonData)
+
+        await writable.write(jsonContent)
+
+        await writable.close()
+
+        alert("保存しました")
+    } catch (error) {
+        if (error.name === "NotAllowedError") {
+            await data.requestPermission({mode:"readwrite"})
+            alert("アクセス許可がありません")
+        } else {
+            console.error(error)
+        }
+    }
+    
+
+}
 /**/
 
 /*時計*/
@@ -222,11 +342,103 @@ document.addEventListener("DOMContentLoaded",function() {
 })
 /**/
 
+/*Class Statics*/
+class Statics {
+    constructor() {
+    }
+
+    setFile(file) {
+        this.files = file
+    }
+
+    setStatics(json) {
+        this.staticsJson = json
+    }
+
+    setSettings(json) {
+        this.settingsJson = json
+    }
+
+    async load() {
+        const staticText = await this.staticsJson.text()
+        const settingText = await this.settingsJson.text()
+        this.statics = JSON.parse(staticText)
+        this.settings = JSON.parse(settingText)
+
+
+    }
+}
+/**/
+
+/*Class DB*/
+
+class DB {
+    constructor(dbName, dbVersion, stores) {
+        this.dbName = dbName;
+        this.dbVersion = dbVersion;
+        // stores は { storeName: keyPath } の形式のオブジェクトを想定
+        this.stores = stores; 
+        this.db = null;
+    }
+
+    async open() {
+        if (this.db) return this.db;
+
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(this.dbName, this.dbVersion);
+
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                // 定義されているすべてのストアを確認・作成
+                for (const [storeName, keyPath] of Object.entries(this.stores)) {
+                    if (!db.objectStoreNames.contains(storeName)) {
+                        db.createObjectStore(storeName, { keyPath });
+                        console.debug(`Store created: ${storeName}`);
+                    }
+                }
+            };
+
+            request.onsuccess = (event) => {
+                this.db = event.target.result;
+                resolve(this.db);
+            };
+
+            request.onerror = () => reject(new Error("Database failed to open"));
+        });
+    }
+
+    // テーブル名を指定して保存
+    async save(storeName, data) {
+        await this.open();
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction([storeName], "readwrite");
+            const store = transaction.objectStore(storeName);
+
+            const request = store.put(data);
+
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(new Error(`Failed to save to ${storeName}`));
+        });
+    }
+
+    // テーブル名を指定して取得
+    async get(storeName, key) {
+        await this.open();
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction([storeName], "readonly");
+            const store = transaction.objectStore(storeName);
+            const request = store.get(key);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(new Error(`Failed to get from ${storeName}`));
+        });
+    }
+}
+
+/**/
+
 /*ファイルの読み込み*/
 document.addEventListener("DOMContentLoaded",async function() {/*ページを開いたときに読み込みボタンにパスを表示する*/
-    const InputFolderPathDB = new DB("MusicPlayerDB_61",1,"InputFolderPath","path")
-    InputFolderPathDB.open()
-    const data = await InputFolderPathDB.get("folderHandle")
+    const data = await db.get("InputFolderPath","path")
     document.getElementById("selectFolder").innerText = data.name || "フォルダを選択"
 })
 
@@ -234,9 +446,8 @@ document.getElementById("selectFolder").addEventListener("click",async function(
     try {
         const dirHandle = await window.showDirectoryPicker()
 
-        const InputFolderPathDB = new DB("MusicPlayerDB_61",1,"InputFolderPath","path")
-        await InputFolderPathDB.save({
-            path: "folderHandle",
+        await db.save("InputFolderPath",{
+            path: "path",
             handle: dirHandle,
             name: dirHandle.name,
         })
@@ -245,15 +456,13 @@ document.getElementById("selectFolder").addEventListener("click",async function(
 
         showAfterInput()
     } catch (e) {
-        console.log(`エラー:${e}`)
+        console.error(`エラー:${e}`)
     }
 })
 
 readFolder.addEventListener("click",async function() {/*ファイルを読み込みボタンが押されたとき*/
     try {
-        const InputFolderPathDB = new DB("MusicPlayerDB_61",1,"InputFolderPath","path")
-        InputFolderPathDB.open()
-        const data = await InputFolderPathDB.get("folderHandle")
+        const data = await db.get("InputFolderPath","path")
 
         if (data && data.handle) {
             const permission = await data.handle.queryPermission({mode: "read" })
@@ -261,7 +470,6 @@ readFolder.addEventListener("click",async function() {/*ファイルを読み込
             if (permission === "granted" || await data.handle.requestPermission({mode: "read" }) === "granted") {
                 const files = await getAllFiles(data.handle);
                 globals.save("files",files)
-                const scatics = new Statics(files).load()
                 load(files)
                 document.getElementById("folderLoad").innerText = `読み込み完了:${data.handle.name}`
                 showAfterInput()
@@ -300,137 +508,84 @@ async function getPathOfInputFolder(filePathDB) {
     try {
         const dirHandle = await window.showDirectoryPicker()
 
-        await filePathDB.saveData("folderHandle",dirHandle)
+        await db.save("InputFolderPath",{
+            path: "path",
+            handle: dirHandle,
+            name: dirHandle.name,
+        })
 
         document.getElementById("folderLoad").innerText = `読み込み完了:${dirHandle.name}`
 
         showAfterInput()
     } catch (e) {
-        console.log(`エラー:${e}`)
+        console.error(`エラー:${e}`)
     }
 }
 
-function load(files) {
+async function load(files) {
+    statics.setFile(files);
+
+    const Settings = files.find(f => f.name === "Settings.json")
+    const Statics = files.find(f => f.name === "Statics.json")
+
+    const settingsText = await Settings.text()
+    const staticsText = await Statics.text()
+
+    const settingsJson = JSON.parse(settingsText)
+    let staticsJson = JSON.parse(staticsText)
+
+    staticsJson = staticsJson.map(track => {
+        if (track.path) {
+            const fileName = track.path.split(/[\\/]/).pop().replace(/\.[^/.]+$/,"")
+            return {...track,path:fileName}
+        }
+    })
+
+
+    statics.setSettings(settingsJson)
+    statics.setStatics(staticsJson)
+    loadSettings(settingsJson)
+
     for (const file of files) {
         if (file.name === "Settings.json") {
-            statics.setSettings(file)
+            undefined
         } else if (file.name === "Statics.json") {
-            statics.setStatics(file)
+            undefined
         } else {
-            music.push(new Music(file))
+            const realFile = files.find(f => f.name === file.path)
+            const data = db.get("FilePlayed",file.name).played ?? 0
+            const played = data.played
+            const lastPlayed = data.lastPlayed
+            music.push(new Music(file,played,lastPlayed))
         }
     }
+    onFileLoaded()
+}
+
+function loadSettings(json) {
+    const sceneSelectValue = json.sceneSelect
+    const timeSignalValue = json.timeSignal
+    const bgmValue = json.bgm
+    const sceneSelectRangeValue = json.sceneSelectRange
+    const timeZoneValue = json.timezone
+    const betweenSongValue = json.betweenSong
+    const leastToSignalValue = json.leastToSignal
+    const leastPlayedValue = json.leastPlayed
+    const timeBetweenPlayValue = json.timeBetweenPlay
+
+
+    document.getElementById("sceneSelectBool").checked = sceneSelectValue
+    document.getElementById("timeSignalBool").checked = timeSignalValue
+    document.getElementById("bgmBool").checked = bgmValue
+    document.getElementById("sceneSelectRange").value = sceneSelectRangeValue
+    document.getElementById("timeZone").value = timeZoneValue
+    document.getElementById("betweenSong").value = betweenSongValue/1000
+    document.getElementById("leastToSignal").value = leastToSignalValue/1000
+    document.getElementById("leastPlayed").value = leastPlayedValue
+    document.getElementById("timeBetweenPlay").value = timeBetweenPlayValue
 }
 /**/
 
-
-/*Class DB*/
-
-class DB{
-    constructor(dbName, dbVersion, objectStore, keyPath) {
-        this.dbName = dbName;
-        this.dbVersion = dbVersion;
-        this.objectStoreName = objectStore;
-        this.keyPath = keyPath;
-        this.db = null;
-    }
-
-    async open() {
-        return new Promise((resolve,reject) => {
-            const request = indexedDB.open(this.dbName,this.dbVersion);
-
-            request.onerror = () => {
-                reject(new Error("Database failed to open"))
-            };
-
-            request.onsuccess = (event) => {
-                this.db = event.target.result;
-                resolve(this.db);
-            };
-
-            request.onupgradeneeded = (event) => {
-                const db = event.target.result;
-
-                if (!db.objectStoreNames.contains(this.objectStoreName)) {
-                    db.createObjectStore(this.objectStoreName,{keyPath:this.keyPath})
-                }
-            }
-        })
-    }
-
-    async save(data) {
-        if (!this.db) {
-            await this.open();
-        }
-
-        return new Promise((resolve,reject) => {
-            const transaction = this.db.transaction([this.objectStoreName],"readwrite");
-            const store = transaction.objectStore(this.objectStoreName);
-            const request = store.put(data);
-
-            request.onsuccess = () => {
-                resolve(request.result);
-            }
-
-            request.onerror = () => {
-                reject(new Error("Failed to save data"))
-            };
-        });
-    }
-
-    async get(key) {
-        if (!this.db) {
-            await this.open()
-        }
-
-        return new Promise((resolve,reject) => {
-            const transaction = this.db.transaction([this.objectStoreName],"readonly");
-            const store = transaction.objectStore(this.objectStoreName);
-            const request = store.get(key);
-
-            request.onsuccess = () => {
-                resolve(request.result);
-            }
-
-            request.onerror = () => {
-                reject(new Error("Failed to get data"));
-            }
-        })
-    }
-
-
-
-    
-}
-/**/
-
-/*Class Statics*/
-class Statics {
-    constructor(files) {
-        this.files = files
-        this.staticsJson = this.files.find(file => file.name === "Statics.json")
-        this.settingsJson = this.files.find(file => file.name === "Settings.json")
-        console.log(this.staticsJson,this.settingsJson)
-    }
-
-    setStatics(json) {
-        this.staticsJson = json
-    }
-
-    setSettings(json) {
-        this.settingsJson = json
-    }
-
-    async load() {
-        const staticText = await this.staticsJson.text()
-        const settingText = await this.settingsJson.text()
-        this.statics = JSON.parse(staticText)
-        this.settings = JSON.parse(settingText)
-
-
-    }
-}
-/**/
 
 /*Class Globals - グローバル変数を代わりに保存するクラス*/
 class Globals {
@@ -448,12 +603,19 @@ class Globals {
 }
 
 class Music {
-    constructor(json) {
-        this.json = json
+    constructor(file,played=0,lastPlayed) {
+
+        let fileName = file.name
+        fileName = decodeURIComponent(fileName)
+        fileName = fileName.split(/[\\/]/).pop().replace(/\.[^/.]+$/,"")
+
+        const json = statics.staticsJson.find(json => json.path === fileName)
+
         this.type = json.type
 
         if (this.type === "bgm") {
             this.hour = json.hour
+            this.file = json.file
         } else if (this.type = "music") {
             this.path = json.path
             this.name = json.name
@@ -464,10 +626,13 @@ class Music {
             this.travel = json.travel
             this.travelOnly = json.travelOnly
             this.weather = json.weather
-            this.registrated = json.registrated
+            this.registered = json.registered
             this.duration = json.duration
             this.source = json.source
             this.language = json.language
+            this.played = played
+            this.lastPlayed = lastPlayed
+            this.file = file
         }
     }
 
@@ -483,54 +648,432 @@ class Music {
 class MusicManager {
     constructor() {
         this.musics = []
+        this.signals = []
     }
 
     push(music) {
         this.musics.push(music)
+        if (music.type === "music" && music.signal) {
+            this.signals.push(music.signal)
+        }
     }
 
+    getBGMByHour(hour) {
+        const result = this.musics.find(music => music.type === "bgm" && music.hour === hour)
+        return result
+    }
+
+    getAllMusic() {
+        const result = this.musics.filter(music => music.type === "music")
+        return result
+    }
+
+    getHourlyMusic(hour,musics = this.musics) {
+        console.log(hour)
+        const _musics = this.getMusicByType("music",false,musics)
+        const range = Number(document.getElementById("sceneSelectRange").value)
+        const hours = this.getHourRange(hour,range)
+        console.log(hours)
+
+        const set = new Set(hours)
+        const result = _musics.filter(music => music.time.some(item => set.has(item)))
+        console.log(result)
+        return result
+    }
+
+    getUnPlayedMusicByPlayed(times,musics = this.musics) {
+        const leastPlayed = this.getLeastPlayed(musics)
+        const playedRange = Array.from({length:times+1},(_,i) => leastPlayed+i)
+        const _musics = this.getMusicByType("music",false,musics)
+        const result = _musics.filter(music => playedRange.includes(music.played))
+        return result
+    }
+
+    getUnPlayedMusicByTime(minute,musics = this.musics) {
+        const now = newDate()
+        const past = newDate(now-60000*minute)
+        const _musics = this.getMusicByType("music",false,musics)
+        const result = _musics.filter(music => music.lastPlayed < past)
+        return result
+    }
+
+    getMusicByTimeToItsSignal(minute,musics = this.music) {
+        const _musics = this.getMusicByType("music",false,musics)
+        const now = newDate()
+        const result = _musics.filter(music => {
+            if (!music.signal) {return true}
+            else {
+                const time = this.getNextTime(music.signal)
+                return time-now > minute*60000
+            }
+        })
+        return result
+    }
+
+    getMusicByTimeToSignal(musics = this.music) {
+        const now = newDate()
+        const nextSignal = this.getNextSignal().time
+        const timeToSignal = nextSignal-now
+        console.log(timeToSignal)
+
+        const betweenSong = Number(document.getElementById("betweenSong").value)*1000
+
+        const _musics = this.getMusicByType("music",false,musics)
+        const result = _musics.filter(music => music.duration + betweenSong + 1000 < timeToSignal)
+        return result
+    }
+
+    chooseMusic(musics = this.music) {
+        const speed = getSpeed()
+        const weather = getWeather()
+        const _musics = this.getMusicByType("music","any",musics)
+
+        let list = []
+
+        for (const music of _musics) {
+            if (music.travelOnly === true) {
+                undefined
+            } else 
+            if (weather === "Clear" && music.weather.includes("Clear")) {
+                for (let i=0;i<2;i++) {
+                    list.push(music)
+                }
+            } else
+            if (weather === "Clouds" && music.weather.includes("Clouds")) {
+                for (let i=0;i<2;i++) {
+                    list.push(music)
+                }
+            } else
+            if (weather === "Rain" && music.weather.includes("Rain")) {
+                for (let i=0;i<5;i++) {
+                    list.push(music)
+                }
+            } else 
+            if (weather === "Snow" && music.weather.includes("Snow")) {
+                for (let i=0;i<10;i++) {
+                    list.push(music)
+                }
+            } else {
+                list.push(music)
+            }
+        }
+
+        if (20 < speed) {
+            for (const music of _musics) {
+                if (music.travel === true) {
+                    for (let i=0;i<2;i++) {
+                        list.push(music)
+                    }
+                }
+            }
+        }
+
+        const randomIndex = Math.floor(Math.random()*list.length)
+        const selected = list[randomIndex]
+        return selected
+    }
+
+    getNextSignal() {
+        let signal = []
+        let timeLeft = undefined
+        const now = newDate()
+        for (const music of this.musics) {
+            if (music.signal) {
+                const time = this.getNextTime(music.signal)
+                signal.push({time:time,music:music})
+            }
+        }
+        let least = signal[0].time - now
+        let nextSignal = signal[0].time
+        let signalMusic = signal[0].music
+        for (const date of signal) {
+            if (date.time - now > 0 && date.time - now < least) {
+                least = date.time - now
+                nextSignal = date.time
+                signalMusic = date.music
+            }
+        }
+        console.log(`nextSignal:${nextSignal},play${signalMusic.name}`)
+        return {time:nextSignal,music:signalMusic}
+
+    }
+
+    getNextTime(hhmm) {
+        const hour = Number(hhmm.slice(0,2))
+        const minute = Number(hhmm.slice(2,4))
+
+        const now = newDate()
+        const time = new Date(now)
+
+        const timezone = Number(document.getElementById("timeZone").value)
+
+        time.setUTCHours(hour - timezone)
+        time.setMinutes(minute)
+        time.setSeconds(0)
+        time.setMilliseconds(0)
+
+        if (time.getTime() <= now.getTime()) {
+            time.setDate(time.getDate()+1)
+        }
+
+        return time
+    }
+
+    getLeastPlayed(musics = this.musics) {
+        const _musics = this.getMusicByType("music",false,musics)
+
+        let least = _musics[0].played
+        for (const music of _musics) {
+            if (music.played < least) {
+                least = music.played
+            }
+        }
+    }
+
+    getHourRange(hour,range) {
+        const max = hour+range
+        const min = hour-range
+        let hours = Array.from({length:range*2+1},(_,i) => min+i)
+        return hours.map(h => {
+            return (h+24)%24
+        })
+    }
+
+    getMusicByType(type,travelOnly,musics = this.musics) {
+        
+        if (typeof travelOnly === "boolean"){
+            const result = musics.filter(music => music.type === type && music.travelOnly === travelOnly)
+            return result
+        } else {
+            const result = musics.filter(music => music.type === type)
+            return result
+        }
+    }
+
+    savePlayed(name) {
+        const index = this.musics.find(music => music.path === name)
+        const played = index.played ?? 0
+        db.save("FilePlayed",{
+            "path":name,
+            "played":played+1,
+            "lastPlayed":newDate().getTime()
+        })
+    }
 
 }
 
-const globals = new Globals()
 
+
+const globals = new Globals()
+const db = new DB("MusicPlayerDB_61",1,{
+    "FilePlayed":"path",
+    "InputFolderPath":"path",
+})
 const music = new MusicManager()
 const statics = new Statics()
 
-function savePathOfIndexFolder() {
+
+
+/*function play*/
+async function play(place,musicFile) {
+    const url = URL.createObjectURL(musicFile.file)
+    const lowerName = musicFile.file.name.toLowerCase()
+    if (place === "b") {
+        audioB.style.display = "none"
+        videoB.style.display = "none"
+        audioB.pause()
+        videoB.pause()
+        const now = newDate()
+        if (lowerName.endsWith('.mp3') || lowerName.endsWith('.m4a')) {
+            audioB.src = url;
+            audioB.style.display = 'block';
+            await audioB.play();
+            audioB.currentTime = now.getMinutes()*60+now.getSeconds()+now.getMilliseconds()/1000
+        } else if (lowerName.endsWith('.webm') || lowerName.endsWith('.mkv') || lowerName.endsWith(".mp4")) {
+            videoB.src = url;
+            videoB.style.display = 'block';
+            await videoB.play();
+        }
+    } else if (place === "m") {
+        music.savePlayed(musicFile.path)
+        audioM.style.display = "none"
+        videoM.style.display = "none"
+        audioM.pause()
+        videoM.pause()
+        document.getElementById("nowPlaying").textContent = "再生中: " + musicFile.name.replace(/\.[^/.]+$/, "");
+        document.title = musicFile.name.replace(/\.[^/.]+$/, "")
+        if (lowerName.endsWith('.mp3') || lowerName.endsWith('.m4a')) {
+            audioM.src = url;
+            audioM.style.display = 'block';
+            await audioM.play();
+        } else if (lowerName.endsWith('.webm') || lowerName.endsWith('.mkv') || lowerName.endsWith(".mp4")) {
+            videoM.src = url;
+            videoM.style.display = 'block';
+            await videoM.play();
+        }
+    } else if (place === "j") {
+        music.savePlayed(musicFile.path)
+        const now = newDate()
+        if (now.getMinutes() === 0) {
+            playBeep("C6")
+        } else if (now.getMinutes() === 15) {
+            playBeep("C5")
+        } else if (now.getMinutes() === 30) {
+            playBeep("E5")
+        } else if (now.getMinutes() === 45) {
+            playBeep("G5")
+        }
+
+        audioJ.style.display = "none"
+        videoJ.style.display = "none"
+        audioJ.pause()
+        videoJ.pause()
+        nowPlaying.textContent = "再生中: " + musicFile.name.replace(/\.[^/.]+$/, "");
+        document.title = musicFile.name.replace(/\.[^/.]+$/, "")
+        if (lowerName.endsWith('.mp3') || lowerName.endsWith('.m4a')) {
+            audioJ.src = url;
+            audioJ.style.display = 'block';
+            await audioJ.play();
+        } else if (lowerName.endsWith('.webm') || lowerName.endsWith('.mkv') || lowerName.endsWith(".mp4")) {
+            videoJ.src = url;
+            videoJ.style.display = 'block';
+            await videoJ.play();
+        }
+    }
+}
+
+async function playBeep(freq) {
+    const available = ["C5","E5","G5","C6"]
+    if (!available.includes(freq)) {
+        console.error(`${freq}は再生できません`)
+        return
+    }
+
+    const fileURL = `SE/${freq}Beep.wav`
+    audioSE.src = fileURL
+
+    try {
+        audioSE.currentTime = 0
+        await audioSE.play()
+    } catch (e) {
+        console.error(e)
+    }
 
 }
 
-
-/*
-folderInput.addEventListener("input",async function() {
-
-    showAfterInput()
-
-    event.target.filesからfiles,paths,namesを作る
-    const files = event.target.files
-
-    let temp = []
-    for (const data of files) {
-        temp.push(data.webkitRelativePath)
+function playBGM() {
+    const now = newDate()
+    const bgm = music.getBGMByHour(now.getHours())
+    if (bgm == null) {
+        alert("BGMがありません")
+        return
     }
-    const paths = temp
+    play("b",bgm)
+}
 
-    temp = []
-    paths.forEach(path => {
-        temp.push(path.split(/[/\\]/).pop().replace(/\.[^.]+$/,''))
-    })
-    const names = temp
-    
+audioB.onended = videoB.onended = () => {
+    playBGM()
+}
 
+audioM.onended = videoM.onended = () => {
+    playMusic()
+}
 
-    
+function playMusic() {
+    /*
+　天候ブーストでその曲が任意の倍率選ばれやすくなる
+音楽のランダム再生システムの修正
+　時間帯にあった曲を選ぶ done
+　再生回数が少ないものを選ぶ done
+　時報が近くにないものを選ぶ done 
+　時報までの時間＋αより短いものを選ぶ  done
+　最近再生されていないものを選ぶ（本番環境） done
+　ランダムに選ぶ done
+    */
 
+    const now = newDate()
 
+    const allMusic = music.getAllMusic()
+    if (allMusic == null) {
+        alert("音楽ファイルがありません")
+        return
+    }
 
+    let hourlyMusic = undefined
+    if (document.getElementById("sceneSelectBool").checked) {
+        hourlyMusic = music.getHourlyMusic(newDate().getHours(),allMusic)
+
+        if (!hourlyMusic) {
+            console.error("時間帯に一致する曲がないのですべての曲を使います")
+            hourlyMusic = allMusic
+        }
+    }
+    console.log(hourlyMusic)
+
+    let unPlayedMusic = music.getUnPlayedMusicByPlayed(document.getElementById("leastPlayed"),hourlyMusic)
+    if (!unPlayedMusic) {
+        console.error("設定 再生回数が最も少ないものから何回多いものまで許容するかの値が不正な可能性があります")
+        unPlayedMusic = hourlyMusic
+    }
+
+    let temp = unPlayedMusic
+    unPlayedMusic = music.getUnPlayedMusicByTime(document.getElementById("timeBetweenPlay"),temp)
+    if (!unPlayedMusic) {
+        console.error("しばらく前に再生された曲がありません")
+        unPlayedMusic = temp
+    }
+
+    let noSignalMusic = undefined
+    if (document.getElementById("timeSignalBool").checked) {
+        noSignalMusic = music.getMusicByTimeToItsSignal(document.getElementById("timeBetweenPlay"),unPlayedMusic)
+            if (!noSignalMusic) {
+                console.error("時報までの時間がある曲がありません")
+                noSignalMusic = unPlayedMusic
+            }
+    }
+
+    let shortMusic = music.getMusicByTimeToSignal(noSignalMusic)
+    if (!shortMusic) {
+        //時報までの時間が短いので曲がない
+    }　else {
+        const playMusic = music.chooseMusic()
+        const betweenSong = Number(document.getElementById("betweenSong").value)
+        console.debug(`次に再生:${playMusic.name},${betweenSong}秒後`)
+        setTimeout(play,betweenSong*1000,"m",playMusic)
+    }
+}
+
+function setSignal() {
+    const nextSignal = music.getNextSignal()
+    const time = music.getNextTime(nextSignal.time)
+    const now = newDate()
+    const timeToSignal = time - now
+
+    setTimeout(play,timeToSignal,"j",nextSignal.music)
+}
+
+function getWeather() {
+    if (document.getElementById("weatherInternet").checked) {
+        //インターネットから天気を取得
+        console.log("インターネットから天気を取得する部分が未完")
+        return "None"
+    } else {
+        return ["None","Clear","Clouds","Rain","Snow"][Number(document.getElementById("weatherInput").value)]
+    }
+}
+
+function getSpeed() {
+    if (document.getElementById("speedInternet").checked) {
+        //ここは完成させるつもりはない
+    } else {
+        return Number(document.getElementById("speedInput").value)
+    }
+}
+
+startButton.addEventListener("click",function() {
+    onStarted()
+    playMusic()
 })
-*/
-
 
     </script>
 </html>

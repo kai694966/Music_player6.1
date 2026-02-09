@@ -3,7 +3,15 @@ import os
 import re
 import glob
 import psycopg2
+import shutil
 
+config = {
+    "dbname":"test_61",
+    "user":"postgres",
+    "password":os.environ.get("PSQL_PASSWORD"),
+    "host":"localhost",
+    "port":5432,
+}
 
 class download:
     def __init__(self,output_base):
@@ -23,13 +31,7 @@ class download:
             print(k,type(v),repr(v))
         
         try:
-            conn = psycopg2.connect(
-                dbname="test_61",
-                user="postgres",
-                password=os.environ.get("PSQL_PASSWORD",""),
-                host="localhost",
-                port="5432",
-            )
+            conn = psycopg2.connect(**config)
             cur = conn.cursor()
 
             sql = """
@@ -82,7 +84,7 @@ class download:
 
     def download_urls(self,url,i,length):
 
-        result = subprocess.run([r"C:\yt-dlp\yt-dlp.exe","--get-filename","-o","%(title)s",url],
+        result = subprocess.run([r"C:\yt-dlp\yt-dlp.exe","--rm-cache-dir","--get-filename","-o","%(title)s",url],
             capture_output=True,
             text=False,
         )
@@ -96,10 +98,13 @@ class download:
         raw_title = raw_title_bytes.decode("cp932",errors="replace").replace("?","？")
         clean_title = re.sub(r'[\\/:*?"<>|]', "", raw_title).replace("＊","")
 
+        
+
         print(f"\n[開始] {clean_title}")
 
         subprocess.run([
                         r"C:\yt-dlp\yt-dlp.exe", 
+                        "--rm-cache-dir",
                         "--quiet",
                         "--no-warnings",
                         "-f", 
@@ -179,7 +184,7 @@ class download:
             "audio": os.path.join(paths["audio"], audio_filename)
         }
 
-        os.replace(downloaded_file,final_file_paths["orig"])
+        shutil.move(downloaded_file,final_file_paths["orig"])
 
         self.register_to_db(url,clean_title,final_file_paths)
 

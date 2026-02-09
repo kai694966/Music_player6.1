@@ -9,7 +9,7 @@ import subprocess
 
 
 config = {
-    "dbname":"test_61",
+    "dbname":"snowmiku",
     "user":"postgres",
     "password":os.environ.get("PSQL_PASSWORD"),
     "host":"localhost",
