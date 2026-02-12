@@ -4,14 +4,18 @@ import re
 import glob
 import psycopg2
 import shutil
+import time
+
 
 config = {
-    "dbname":"test_61",
+    "dbname":"musicplayer61",
     "user":"postgres",
     "password":os.environ.get("PSQL_PASSWORD"),
     "host":"localhost",
     "port":5432,
 }
+
+node_path = "C:\Program Files\nodejs\node.exe"
 
 class download:
     def __init__(self,output_base):
@@ -84,9 +88,15 @@ class download:
 
     def download_urls(self,url,i,length):
 
-        result = subprocess.run([r"C:\yt-dlp\yt-dlp.exe","--rm-cache-dir","--get-filename","-o","%(title)s",url],
+        command = (
+            f'C:\\yt-dlp\\yt-dlp.exe --rm-cache-dir --cookies-from-browser firefox '
+            f'--js-runtimes node --get-filename -o "%(title)s" {url}'
+        )
+
+        result = subprocess.run(command,
             capture_output=True,
             text=False,
+            shell=True
         )
 
         if result.returncode != 0:
@@ -102,19 +112,14 @@ class download:
 
         print(f"\n[開始] {clean_title}")
 
-        subprocess.run([
-                        r"C:\yt-dlp\yt-dlp.exe", 
-                        "--rm-cache-dir",
-                        "--quiet",
-                        "--no-warnings",
-                        "-f", 
-                        "bestvideo+bestaudio/best", 
-                        "--merge-output-format", 
-                        "mp4", 
-                        "-o", 
-                        "temp_%(id)s.%(ext)s",
-                        url
-        ])
+        command = (
+            f'C:\\yt-dlp\\yt-dlp.exe --rm-cache-dir --cookies-from-browser firefox '
+            f'--js-runtimes node --quiet --no-warnings '
+            f'-f "bestvideo+bestaudio/best" --merge-output-format mp4 '
+            f'-o "temp_%(id)s.%(ext)s" {url}'
+        )
+
+        subprocess.run(command,shell=True)
 
         paths = {
             "orig": os.path.join(self.output_base, "original"),
@@ -133,47 +138,6 @@ class download:
         downloaded_file = found_files[0]
         temp_ext = os.path.splitext(downloaded_file)[1]
 
-        subprocess.run([
-            "ffmpeg",
-            "-y",
-            "-hide_banner",
-            "-loglevel",
-            "info",
-            "-stats",
-            "-i",
-            downloaded_file,
-            "-vf",
-            "scale=-2:480",
-            "-c:v",
-            "libx264",
-            "-crf",
-            "28",
-            "-preset",
-            "faster",
-            "-c:a",
-            "aac",
-            "-b:a",
-            "320k",
-            os.path.join(paths["p480"],f"{clean_title}.mp4")
-        ])
-        
-        subprocess.run([
-            "ffmpeg", 
-            "-y", 
-            "-hide_banner",
-            "-loglevel",
-            "info",
-            "-stats",
-            "-i", 
-            downloaded_file, 
-            "-vn", 
-            "-c:a",
-            "aac",
-            "-b:a",
-            "320k",
-            os.path.join(paths["audio"], f"{clean_title}.m4a")
-        ])
-
         orig_filename = f"{clean_title}{temp_ext}"
         p480_filename = f"{clean_title}.mp4"
         audio_filename = f"{clean_title}.m4a"
@@ -184,7 +148,61 @@ class download:
             "audio": os.path.join(paths["audio"], audio_filename)
         }
 
-        shutil.move(downloaded_file,final_file_paths["orig"])
+
+        if self.download_p480:
+            subprocess.run([
+                "ffmpeg",
+                "-y",
+                "-hide_banner",
+                "-loglevel",
+                "info",
+                "-stats",
+                "-i",
+                downloaded_file,
+                "-vf",
+                "scale=-2:480",
+                "-c:v",
+                "libx264",
+                "-crf",
+                "28",
+                "-preset",
+                "faster",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "320k",
+                os.path.join(paths["p480"],f"{clean_title}.mp4")
+            ])
+        else:
+            final_file_paths["p480"] = None
+        
+        if self.download_audio:
+            subprocess.run([
+                "ffmpeg", 
+                "-y", 
+                "-hide_banner",
+                "-loglevel",
+                "info",
+                "-stats",
+                "-i", 
+                downloaded_file, 
+                "-vn", 
+                "-c:a",
+                "aac",
+                "-b:a",
+                "320k",
+                os.path.join(paths["audio"], f"{clean_title}.m4a")
+            ])
+        else:
+            final_file_paths["audio"] = None
+
+
+        if self.download_orig:
+            shutil.move(downloaded_file,final_file_paths["orig"])
+        else:
+            if os.path.exists(downloaded_file):
+                os.remove(downloaded_file)
+            final_file_paths["orig"] = None
 
         self.register_to_db(url,clean_title,final_file_paths)
 
@@ -194,7 +212,27 @@ class download:
 
     def start_download(self,path):
 
-        input = ("ダウンロード中のファイルがないことを確認してください\n[Done]\n>>")
+        self.download_orig = input("最高品質のものをダウンロードしますか t/f\n>>")
+        if self.download_orig == "t":
+            self.download_orig = True
+        else:
+            self.download_orig = False
+        
+        self.download_p480 = input("480Pをダウンロードしますか t/f\n>>")
+        if self.download_p480 == "t":
+            self.download_p480 = True
+        else:
+            self.download_p480 = False
+
+        self.download_audio = input("音声をダウンロードしますか t/f\n>>")
+        if self.download_audio == "t":
+            self.download_audio = True
+        else:
+            self.download_audio = False
+
+        check = input("ダウンロード中のファイルがないことを確認してください\n>>")
+
+        check = input(f"ダウンロード先のDBが正しいか確認してください\n[{config['dbname']}]>>")
 
         self.read_urls()
         length = len(self.urls)
@@ -203,5 +241,8 @@ class download:
             print(f"[{i}/{length}]",end="")
             if url:
                 self.download_urls(url,i,length)
+                time.sleep(120)
             
             i += 1
+
+            

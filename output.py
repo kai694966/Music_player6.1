@@ -5,7 +5,7 @@ from psycopg2.extras import RealDictCursor
 import shutil
 
 config = {
-    "dbname":"snowmiku",
+    "dbname":"musicplayer61",
     "user":"postgres",
     "password":os.environ.get("PSQL_PASSWORD"),
     "host":"localhost",

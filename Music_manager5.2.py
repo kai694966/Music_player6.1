@@ -9,7 +9,7 @@ import subprocess
 
 
 config = {
-    "dbname":"snowmiku",
+    "dbname":"musicplayer61",
     "user":"postgres",
     "password":os.environ.get("PSQL_PASSWORD"),
     "host":"localhost",
@@ -42,7 +42,7 @@ def create_tables():
             id SERIAL PRIMARY KEY,
             type VARCHAR(10) NOT NULL,
             
-            path_original TEXT NOT NULL,
+            path_original TEXT,
             path_480p TEXT,
             path_audio TEXT,
 
@@ -503,4 +503,4 @@ if __name__ == "__main__":
         pass
     elif mode == 4:
         create_tables()
-        download.download(input("出力先のフォルダを指定\n['E:\Music\MusicPlayerStorage']\n>>") or 'E:\Music\MusicPlayerStorage')#output_pathにダウンロードを開始
+        download.download(input("出力先のフォルダを指定\n['E:\Music\MusicPlayerStorage61']\n>>") or 'E:\Music\MusicPlayerStorage61')#output_pathにダウンロードを開始

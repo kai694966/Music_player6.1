@@ -118,7 +118,8 @@
 <button onclick="fileDialog.showModal()" id="showProperty">動画/音声のプロパティを表示</button>
 
 <dialog id="fileDialog">
-    <h2 id="nameDialog">title:</h2>
+    <h2 id="pathDialog">path:</h2>
+    <p id="nameDialog">name:</p>
     <p id="coverDialog">cover:</p>
     <p id="originalDialog">original:</p>
     <p id="timeDialog">time:</p>
@@ -126,8 +127,12 @@
     <p id="travelDialog">travel:</p>
     <p id="travelOnlyDialog">travelOnly:</p>
     <p id="weatherDialog">weather:</p>
-    <p id="duration">duration:</p>
-    <p id="source">source:</p>
+    <p id="durationDialog">duration:</p>
+    <p id="registeredDialog">registered:</p>
+    <p id="languageDialog">language:</p>
+    <p id="playedDialog">played:</p>
+    <p>source</p>
+    <a id="sourceDialog" href=""></a>
 
     <button onclick="fileDialog.close()">close</button>
 </dialog>
@@ -249,6 +254,7 @@ function onStarted() {
     document.getElementById("leastPlayed").disabled = true
     document.getElementById("timeBetweenPlay").disabled = true
     document.getElementById("saveSettingJson").disabled = true
+    document.getElementById("startButton").disabled = true
 
 
 }
@@ -553,9 +559,10 @@ async function load(files) {
             undefined
         } else {
             const realFile = files.find(f => f.name === file.path)
-            const data = db.get("FilePlayed",file.name).played ?? 0
-            const played = data.played
-            const lastPlayed = data.lastPlayed
+            const fileName = file.name.replace(/\.[^/.]+$/, "")
+            const data = await db.get("FilePlayed",fileName)
+            const played = data ? (data.played ?? 0) : 0
+            const lastPlayed = data ? data.lastPlayed : null
             music.push(new Music(file,played,lastPlayed))
         }
     }
@@ -682,10 +689,19 @@ class MusicManager {
     }
 
     getUnPlayedMusicByPlayed(times,musics = this.musics) {
-        const leastPlayed = this.getLeastPlayed(musics)
-        const playedRange = Array.from({length:times+1},(_,i) => leastPlayed+i)
+        const leastPlayed = this.getLeastPlayed(musics).played || 0
+        const maxAllowed = leastPlayed + times
+
         const _musics = this.getMusicByType("music",false,musics)
-        const result = _musics.filter(music => playedRange.includes(music.played))
+        console.log(_musics,leastPlayed,maxAllowed)
+
+        const result = _musics.filter(music => {
+            const p = music.played || 0
+            return p >= leastPlayed && p <= maxAllowed
+        })
+
+        console.log(result)
+
         return result
     }
 
@@ -823,11 +839,14 @@ class MusicManager {
         const _musics = this.getMusicByType("music",false,musics)
 
         let least = _musics[0].played
+        let leastMusic = _musics[0]
         for (const music of _musics) {
             if (music.played < least) {
                 least = music.played
+                leastMusic = music
             }
         }
+        return leastMusic
     }
 
     getHourRange(hour,range) {
@@ -850,14 +869,19 @@ class MusicManager {
         }
     }
 
-    savePlayed(name) {
+    async savePlayed(name) {
+        console.log(name)
         const index = this.musics.find(music => music.path === name)
+        console.log(index)
         const played = index.played ?? 0
-        db.save("FilePlayed",{
+        index.played++
+        await db.save("FilePlayed",{
             "path":name,
             "played":played+1,
             "lastPlayed":newDate().getTime()
         })
+
+
     }
 
 }
@@ -896,6 +920,7 @@ async function play(place,musicFile) {
         }
     } else if (place === "m") {
         music.savePlayed(musicFile.path)
+        setProperty(musicFile)
         audioM.style.display = "none"
         videoM.style.display = "none"
         audioM.pause()
@@ -913,6 +938,7 @@ async function play(place,musicFile) {
         }
     } else if (place === "j") {
         music.savePlayed(musicFile.path)
+        setProperty(musicFile)
         const now = newDate()
         if (now.getMinutes() === 0) {
             playBeep("C6")
@@ -973,10 +999,41 @@ function playBGM() {
 
 audioB.onended = videoB.onended = () => {
     playBGM()
+    audioB.style.display = "none";
+    videoB.style.display = "none;"
 }
 
 audioM.onended = videoM.onended = () => {
     playMusic()
+    audioM.style.display = "none";
+    videoM.style.display = "none";
+}
+
+audioJ.onended = videoJ.onended = () => {
+    setSignal()
+    playMusic()
+    audioJ.style.display = "none";
+    videoJ.style.display = "none";
+}
+
+function setProperty(music) {
+    document.getElementById("pathDialog").innerText = `${music.path}`
+    document.getElementById("nameDialog").innerText = `name:${music.name}`
+    document.getElementById("coverDialog").innerText = `cover:${music.cover}`
+    document.getElementById("originalDialog").innerText = `original:${music.original}`
+    document.getElementById("timeDialog").innerText = `time:${music.time}`
+    document.getElementById("signalDialog").innerText = `signal:${music.signal}`
+    document.getElementById("travelDialog").innerText = `travel:${music.travel}`
+    document.getElementById("travelOnlyDialog").innerText = `travelOnly:${music.travelOnly}`
+    document.getElementById("weatherDialog").innerText = `weather:${music.weather}`
+    document.getElementById("durationDialog").innerText = `duration:${music.duration/1000}`
+    document.getElementById("registeredDialog").innerText = `registered:${music.registered}`
+    document.getElementById("languageDialog").innerText = `language:${music.language}`
+    document.getElementById("playedDialog").innerText = `played:${music.played}`
+    document.getElementById("sourceDialog").href = music.source
+    document.getElementById("sourceDialog").innerText = music.source
+
+
 }
 
 function playMusic() {
@@ -1003,40 +1060,40 @@ function playMusic() {
     if (document.getElementById("sceneSelectBool").checked) {
         hourlyMusic = music.getHourlyMusic(newDate().getHours(),allMusic)
 
-        if (!hourlyMusic) {
+        if (hourlyMusic.length === 0) {
             console.error("時間帯に一致する曲がないのですべての曲を使います")
             hourlyMusic = allMusic
         }
     }
     console.log(hourlyMusic)
 
-    let unPlayedMusic = music.getUnPlayedMusicByPlayed(document.getElementById("leastPlayed"),hourlyMusic)
-    if (!unPlayedMusic) {
+    let unPlayedMusic = music.getUnPlayedMusicByPlayed(document.getElementById("leastPlayed").value-0,hourlyMusic)
+    if (unPlayedMusic.length === 0) {
         console.error("設定 再生回数が最も少ないものから何回多いものまで許容するかの値が不正な可能性があります")
         unPlayedMusic = hourlyMusic
     }
 
     let temp = unPlayedMusic
-    unPlayedMusic = music.getUnPlayedMusicByTime(document.getElementById("timeBetweenPlay"),temp)
-    if (!unPlayedMusic) {
+    unPlayedMusic = music.getUnPlayedMusicByTime(document.getElementById("timeBetweenPlay").value-0,temp)
+    if (unPlayedMusic.length === 0) {
         console.error("しばらく前に再生された曲がありません")
         unPlayedMusic = temp
     }
 
     let noSignalMusic = undefined
     if (document.getElementById("timeSignalBool").checked) {
-        noSignalMusic = music.getMusicByTimeToItsSignal(document.getElementById("timeBetweenPlay"),unPlayedMusic)
-            if (!noSignalMusic) {
+        noSignalMusic = music.getMusicByTimeToItsSignal(document.getElementById("timeBetweenPlay").value-0,unPlayedMusic)
+            if (noSignalMusic.length === 0) {
                 console.error("時報までの時間がある曲がありません")
                 noSignalMusic = unPlayedMusic
             }
     }
 
     let shortMusic = music.getMusicByTimeToSignal(noSignalMusic)
-    if (!shortMusic) {
+    if (shortMusic.length === 0) {
         //時報までの時間が短いので曲がない
     }　else {
-        const playMusic = music.chooseMusic()
+        const playMusic = music.chooseMusic(shortMusic)
         const betweenSong = Number(document.getElementById("betweenSong").value)
         console.debug(`次に再生:${playMusic.name},${betweenSong}秒後`)
         setTimeout(play,betweenSong*1000,"m",playMusic)
@@ -1045,7 +1102,7 @@ function playMusic() {
 
 function setSignal() {
     const nextSignal = music.getNextSignal()
-    const time = music.getNextTime(nextSignal.time)
+    const time = music.getNextTime(nextSignal.music.signal)
     const now = newDate()
     const timeToSignal = time - now
 
@@ -1073,6 +1130,9 @@ function getSpeed() {
 startButton.addEventListener("click",function() {
     onStarted()
     playMusic()
+    if (document.getElementById("timeSignalBool").checked) {
+        setSignal()
+    }
 })
 
     </script>
