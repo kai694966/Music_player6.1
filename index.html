@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-8</p>
+<p>v6.1 β-9</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -1252,7 +1252,7 @@ startButton.addEventListener("click",function() {
         playBGM()
     }
     if (document.getElementById("sleepMode").checked) {
-        idleTimer = setTimeout(activateIdleMode,Number(document.getElementById("sleepModeInput").value)*60*1000)
+        idleTimer = setTimeout(activateIdleMode,Number(document.getElementById("sleepModeInput").value)*60*1000);
         ["mousemove","mousedown","keydown","touchstart"].forEach(e => {
             window.addEventListener(e,resetIdleTimer,{passive:true})
         })
