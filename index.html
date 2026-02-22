@@ -1252,8 +1252,7 @@ startButton.addEventListener("click",function() {
         playBGM()
     }
     if (document.getElementById("sleepMode").checked) {
-        isInSleepMode = true
-        resetIdleTimer();
+        idleTimer = setTimeout(activateIdleMode,Number(document.getElementById("sleepModeInput").value)*60*1000)
         ["mousemove","mousedown","keydown","touchstart"].forEach(e => {
             window.addEventListener(e,resetIdleTimer,{passive:true})
         })
