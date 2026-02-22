@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-6</p>
+<p>v6.1 β-7</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -1054,7 +1054,6 @@ audioJ.onended = videoJ.onended = () => {
 }
 
 function resetIdleTimer() {
-
     if (isInSleepMode) {
         document.getElementById("sleepModeMessage").innerText = "休止モードは無効です"
         isInSleepMode = false
@@ -1253,6 +1252,7 @@ startButton.addEventListener("click",function() {
         playBGM()
     }
     if (document.getElementById("sleepMode").checked) {
+        isInSleepMode = true
         resetIdleTimer();
         ["mousemove","mousedown","keydown","touchstart"].forEach(e => {
             window.addEventListener(e,resetIdleTimer,{passive:true})
