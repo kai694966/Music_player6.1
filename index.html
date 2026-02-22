@@ -950,8 +950,8 @@ async function play(place,musicFile) {
         videoM.style.display = "none"
         audioM.pause()
         videoM.pause()
-        document.getElementById("nowPlaying").textContent = "再生中: " + musicFile.name.replace(/\.[^/.]+$/, "");
-        document.title = musicFile.name.replace(/\.[^/.]+$/, "")
+        document.getElementById("nowPlaying").textContent = "再生中: " + musicFile.file.name.replace(/\.[^/.]+$/, "");
+        document.title = musicFile.file.name.replace(/\.[^/.]+$/, "")
         if (lowerName.endsWith('.mp3') || lowerName.endsWith('.m4a')) {
             audioM.src = url;
             audioM.style.display = 'block';
@@ -982,8 +982,8 @@ async function play(place,musicFile) {
         videoJ.style.display = "none"
         audioJ.pause()
         videoJ.pause()
-        nowPlaying.textContent = "再生中: " + musicFile.file.name.replace(/\.[^/.]+$/, "");
-        document.title = musicFile.name.replace(/\.[^/.]+$/, "")
+        document.getElementById("nowPlaying").textContent = "再生中: " + musicFile.file.name.replace(/\.[^/.]+$/, "");
+        document.title = musicFile.file.name.replace(/\.[^/.]+$/, "")
         if (lowerName.endsWith('.mp3') || lowerName.endsWith('.m4a')) {
             audioJ.src = url;
             audioJ.style.display = 'block';
