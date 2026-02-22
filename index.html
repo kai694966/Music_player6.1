@@ -1054,12 +1054,15 @@ audioJ.onended = videoJ.onended = () => {
 }
 
 function resetIdleTimer() {
-    clearTimeout(idleTimer)
-    idleTimer = setTimeout(activateIdleMode,Number(document.getElementById("sleepModeInput").value)*60*1000)
-    isInSleepMode = false
-    document.getElementById("sleepModeMessage").innerText = "休止モードは無効です"
-    setSignal()
-    playMusic()
+
+    if (isInSleepMode) {
+        document.getElementById("sleepModeMessage").innerText = "休止モードは無効です"
+        isInSleepMode = false
+        setSignal()
+        playMusic()
+        clearTimeout(idleTimer)
+        idleTimer = setTimeout(activateIdleMode,Number(document.getElementById("sleepModeInput").value)*60*1000)
+    }
 }
 
 function activateIdleMode() {
