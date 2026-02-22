@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-2</p>
+<p>v6.1 β-3</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -622,7 +622,11 @@ class Music {
     constructor(file,played=0,lastPlayed) {
 
         let fileName = file.name
-        fileName = decodeURIComponent(fileName)
+        try {
+            fileName = decodeURIComponent(fileName)
+        } catch (e) {
+            console.error(`${fileName}のデコードに失敗しました`)
+        }
         fileName = fileName.split(/[\\/]/).pop().replace(/\.[^/.]+$/,"")
 
         const json = statics.staticsJson.find(json => json.path === fileName)

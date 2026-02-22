@@ -14,7 +14,7 @@ config = {
     "password":os.environ.get("PSQL_PASSWORD"),
     "host":"localhost",
     "port":5432,
-}#download.py,output.pyにもconfigがある
+}#download.py,output.py,selection_editor.pyにもconfigがある
 
 def connect_db(dbname):
     temp_config = config.copy()
@@ -429,8 +429,7 @@ def name_suggestion(path):
         original = "ロクデナシ"
 
     elif path[0:4] == "幾田りら":
-        match = re.search(r"(.*?)",path)
-        name = match.group(1) if match else path
+        name = "".join(path.split("「")[1]).split("」")[0]
         cover = "幾田りら"
         original = "幾田りら"
 
@@ -464,17 +463,22 @@ def name_suggestion(path):
     elif "／ 宵-Yoi Cover" in path:
         name = path.split("(")[0]
         cover = "宵"
-        original = "Unknown"
+        original = "".join(path.split("（")[1]).split("）")[0]
 
     elif "Kotoha" in path:
         name = path.split(" ")[0]
         cover = "Kotoha"
-        original = path.split(" ")[1]
+        original = path.split()[1]
 
     elif "ヨルシカ - " in path:
         name = path.split(" ")[2]
         cover = "n-buna"
         original = "n-buna"
+
+    elif "【月" in path:
+        name = path.split(" ")[0]
+        cover = "宵"
+        original = path.split(" ")[2]
 
     else:
         name = path

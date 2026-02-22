@@ -17,7 +17,7 @@ config = {
 #Setings.pyにはこれが出力される
 setting = {"sceneSelect":True,"timeSignal":True,"bgm":False,"sceneSelectRange":5,"timezone":9,"betweenSong":1000,"leastToSignal":10000,"leastPlayed":"2","timeBetweenPlay":"30"}
 
-filter_command = "SELECT * FROM tracks ORDER BY id;"
+filter_command = "SELECT * FROM tracks WHERE selection @> ARRAY['v6.1-a'] ORDER BY id;"
 
 
 """
@@ -48,6 +48,8 @@ class output():
         self.quality = int(self.quality)
 
         self.quality = ["path_original","path_480p","path_audio"][self.quality-1]
+
+        input(f"query:{filter_command}\n>>")
         
 
         self.start_output()
