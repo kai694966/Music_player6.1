@@ -59,9 +59,10 @@ def create_tables():
             registered char(8),
             volume_offset INTEGER DEFAULT 0,
             duration INTEGER,
-            source TEXT UNIQUE,
+            source TEXT,
             language char(10) DEFAULT 'ja',
-            hour INTEGER
+            hour INTEGER,
+            selection TEXT[] DEFAULT '{}'
 
         );
         """
@@ -88,7 +89,8 @@ def registration():
     sql_select = """
         SELECT id, name, source, path_audio,language
         FROM tracks
-        WHERE time IS NULL OR array_length(time,1) IS NULL;
+        WHERE hour IS NULL 
+        ORDER BY duration ASC ;
     """
 
     unregistered_rows = []
@@ -128,7 +130,9 @@ def process_metadata_entry(db_track, index, total,type):
         if signal_time == "":
             signal_time = None
 
-        is_travel = input("旅行の時のみ流れる？(t/f)\n[false]\n>>")
+        print(signal_time)
+
+        is_travel = input("旅行の時に流れる？(t/f)\n[false]\n>>")
         if is_travel in ["t","ｔ","true","True"]:
             is_travel = True
             only_travel = input("旅行する時のみ流す？\n>>")
@@ -179,7 +183,7 @@ def process_metadata_entry(db_track, index, total,type):
     elif type == "bgm":
         print(f"\n--- [{index}/{total}] {db_track['name']} ---")
 
-        hour = input("何時台の曲?/n>>")
+        hour = input("何時台の曲?\n>>")
 
         today = datetime.now().strftime('%Y%m%d')
         registered = input(f"登録日 [{today}] >>") or today
@@ -187,6 +191,8 @@ def process_metadata_entry(db_track, index, total,type):
         volume_offset = 0
 
         source = ""
+
+        type_input = type
 
         track_data = {
             "id": db_track['id'],
@@ -204,13 +210,11 @@ def process_metadata_entry(db_track, index, total,type):
             "source":source,
             "language":"",
             "hour":hour,
-
         }
 
-
-
-        # 登録実行
     save_track_to_db(track_data)
+
+
 
 def save_track_to_db(data):
     try:
@@ -248,8 +252,8 @@ def save_track_to_db(data):
                         data["registered"],
                         data["volume_offset"],
                         data["language"],
-                        data["id"],
-                        data["hour"]
+                        data["hour"],
+                        data["id"]
                     ))
                 else:
                     # INSERT処理 (もし新規ファイルから登録する場合用)
@@ -396,9 +400,9 @@ def name_suggestion(path):
         original = "MIMI"
 
     elif path[0:17] == "Official髭男dism - ":
-        name = path.split(" ")[2]
-        cover = "higedan"
-        original = "higedan"
+        name = " ".join(path.split(" ")[2:]).split(" [")[0].split("［")[0]
+        cover = "Official髭男dism"
+        original = "Official髭男dism"
 
     elif path[0:7] == "YOASOBI":
         match = re.search(r"「(.*?)」",path)
@@ -412,6 +416,13 @@ def name_suggestion(path):
         original = "Unknown"
 
     elif path[0:5] == "ロクデナシ":
+        match = re.search(r"「(.*?)」",path)
+        name = match.group(1) if match else path
+        cover = "ロクデナシ"
+        original = "ロクデナシ"
+    
+    elif path[0:5] == "ロクテナシ":
+        print("濁点が抜けています")
         match = re.search(r"「(.*?)」",path)
         name = match.group(1) if match else path
         cover = "ロクデナシ"
@@ -434,6 +445,36 @@ def name_suggestion(path):
         name = path.split("／")[0]
         cover = "まふまふ"
         original = "Unknown"
+
+    elif "Guiano - " in path:
+        name = path.split(" ")[2]
+        cover = "Guiano"
+        original = "Guiano"
+
+    elif "Orangestar - " in path:
+        name = " ".join(path.split(" ")[2:]).split(" (")[0]
+        cover = "Orangestar"
+        original = "Orangestar"
+
+    elif "はるまきごはん" in path:
+        name = path.split()[0]
+        cover = "はるまきごはん"
+        original = "はるまきごはん"
+
+    elif "／ 宵-Yoi Cover" in path:
+        name = path.split("(")[0]
+        cover = "宵"
+        original = "Unknown"
+
+    elif "Kotoha" in path:
+        name = path.split(" ")[0]
+        cover = "Kotoha"
+        original = path.split(" ")[1]
+
+    elif "ヨルシカ - " in path:
+        name = path.split(" ")[2]
+        cover = "n-buna"
+        original = "n-buna"
 
     else:
         name = path

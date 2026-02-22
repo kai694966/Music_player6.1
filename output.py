@@ -3,6 +3,8 @@ import psycopg2
 import json
 from psycopg2.extras import RealDictCursor
 import shutil
+import sys
+
 
 config = {
     "dbname":"musicplayer61",
@@ -12,19 +14,25 @@ config = {
     "port":5432,
 }
 
-setting = {#Settings.jsonにはこれが出力される
-    "quality":"p480",
-    "SceneSelect": True,
-    "SceneSelectRange": 0,
-    "betweenSongs": 6000,
-    "timezone": 9
-}
+#Setings.pyにはこれが出力される
+setting = {"sceneSelect":True,"timeSignal":True,"bgm":False,"sceneSelectRange":5,"timezone":9,"betweenSong":1000,"leastToSignal":10000,"leastPlayed":"2","timeBetweenPlay":"30"}
 
 filter_command = "SELECT * FROM tracks ORDER BY id;"
 
 
 """
 SELECT * FROM tracks WHERE (name,signal,coverなど) = '(ほしい文字列など)'
+
+
+"best"がselectionに含まれる
+"SELECT * FROM tracks WHERE 'best' = ANY(selection) ORDER BY id;" --> selection.includes("best")
+
+"best"または"chill"が含まれるselection
+"SELECT * FROM tracks WHERE selection && ARRAY['best', 'chill'] ORDER BY id;"
+
+"best","anime"が両方含まれるselection
+"SELECT * FROM tracks WHERE selection @> ARRAY['best', 'anime'] ORDER BY id;"
+
 """
 
 class output():
@@ -94,7 +102,6 @@ class output():
 
         if track_type == "music":
 
-            print(row["time"])
 
             time_list = {
                 "lateNight":[0,1,2,3,4],
@@ -159,7 +166,10 @@ class output():
             os.makedirs(bgm_path)
 
 
+        i = 0
+        length = len(tracks)
         for track in tracks:
+            print_progress(i,length,100)
             source_path = track["path"]
             if track["type"] == "music":
                 if os.path.isfile(source_path):
@@ -167,6 +177,10 @@ class output():
             elif track["type"] == "bgm":
                 if os.path.isfile(source_path):
                     shutil.copy2(source_path,bgm_path)
+            
+            i += 1
+
+            
 
     def start_output(self):
         if not os.environ.get("PSQL_PASSWORD"):
@@ -184,3 +198,28 @@ class output():
 
         else:
             print("トラックが見つかりませんでした")
+
+
+def print_progress(i, length, bar_size=20):
+    """
+    i: 現在のステップ (0から始まる)
+    length: 全体のステップ数
+    bar_size: バーの文字数（見た目の長さ）
+    """
+    # 進捗率の計算
+    percent = (i + 1) / length
+    # 満たされたマスの数
+    filled_length = int(bar_size * percent)
+    
+    # バーの組み立て
+    # '=' を進んだ分だけ、'-' を残りの分だけ表示
+    bar = '=' * filled_length + '-' * (bar_size - filled_length)
+    
+    # \r でカーソルを行頭に戻し、end='' で改行を防ぐ
+    # 最後に 1/10 のような数値を表示
+    sys.stdout.write(f'\r[{bar} {i + 1}/{length}]')
+    sys.stdout.flush()
+
+    # 最後まで到達したら改行する
+    if i + 1 == length:
+        print()

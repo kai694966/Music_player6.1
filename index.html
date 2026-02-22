@@ -3,14 +3,14 @@
     <head>
         <meta charset="UTF-8">
         <meta name="theme-color content=#0080ff">
-        <!--<link rel="manifest" href="manifest.json">-->
-        <link rel="icon" href="favicon.ico" type="image/x-icon">
+        <link rel="manifest" href="manifest.json">
+        <link rel="icon" href="icons/icon-192.png" type="image/x-icon">
         <meta name="viewport" content="width=device-width,initial-scale=1.0">
     </head>
 
     <body>
 
-<p>v6.1</p>
+<p>v6.1 β-2</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -111,7 +111,7 @@
 
 <audio id="SE_Audio" controls style="display: none;"></audio>
 
-
+<br>
 
 
 
@@ -131,9 +131,8 @@
     <p id="registeredDialog">registered:</p>
     <p id="languageDialog">language:</p>
     <p id="playedDialog">played:</p>
-    <p>source</p>
     <a id="sourceDialog" href=""></a>
-
+    <br>
     <button onclick="fileDialog.close()">close</button>
 </dialog>
 
@@ -164,6 +163,14 @@ dialog::backdrop {
     </style>
 
     <script>
+
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+        .then(() => console.debug("SW registered"))
+        .catch(err => console.error("SW fail:", err));
+}
+
+
 
 const folderInput = document.getElementById("folderInput")//ファイルを入力するところ
 const startButton = document.getElementById("startButton")//開始ボタン
@@ -559,6 +566,8 @@ async function load(files) {
             undefined
         } else {
             const realFile = files.find(f => f.name === file.path)
+
+            
             const fileName = file.name.replace(/\.[^/.]+$/, "")
             const data = await db.get("FilePlayed",fileName)
             const played = data ? (data.played ?? 0) : 0
@@ -622,7 +631,7 @@ class Music {
 
         if (this.type === "bgm") {
             this.hour = json.hour
-            this.file = json.file
+            this.file = file
         } else if (this.type = "music") {
             this.path = json.path
             this.name = json.name
@@ -676,15 +685,12 @@ class MusicManager {
     }
 
     getHourlyMusic(hour,musics = this.musics) {
-        console.log(hour)
         const _musics = this.getMusicByType("music",false,musics)
         const range = Number(document.getElementById("sceneSelectRange").value)
         const hours = this.getHourRange(hour,range)
-        console.log(hours)
 
         const set = new Set(hours)
         const result = _musics.filter(music => music.time.some(item => set.has(item)))
-        console.log(result)
         return result
     }
 
@@ -693,21 +699,18 @@ class MusicManager {
         const maxAllowed = leastPlayed + times
 
         const _musics = this.getMusicByType("music",false,musics)
-        console.log(_musics,leastPlayed,maxAllowed)
 
         const result = _musics.filter(music => {
             const p = music.played || 0
             return p >= leastPlayed && p <= maxAllowed
         })
 
-        console.log(result)
-
         return result
     }
 
     getUnPlayedMusicByTime(minute,musics = this.musics) {
         const now = newDate()
-        const past = newDate(now-60000*minute)
+        const past = newDate().setTime(now-60000*minute)
         const _musics = this.getMusicByType("music",false,musics)
         const result = _musics.filter(music => music.lastPlayed < past)
         return result
@@ -730,7 +733,6 @@ class MusicManager {
         const now = newDate()
         const nextSignal = this.getNextSignal().time
         const timeToSignal = nextSignal-now
-        console.log(timeToSignal)
 
         const betweenSong = Number(document.getElementById("betweenSong").value)*1000
 
@@ -823,7 +825,7 @@ class MusicManager {
 
         const timezone = Number(document.getElementById("timeZone").value)
 
-        time.setUTCHours(hour - timezone)
+        time.setHours(hour)
         time.setMinutes(minute)
         time.setSeconds(0)
         time.setMilliseconds(0)
@@ -870,11 +872,10 @@ class MusicManager {
     }
 
     async savePlayed(name) {
-        console.log(name)
         const index = this.musics.find(music => music.path === name)
-        console.log(index)
         const played = index.played ?? 0
         index.played++
+        index.lastPlayed = newDate().getTime()
         await db.save("FilePlayed",{
             "path":name,
             "played":played+1,
@@ -911,16 +912,19 @@ async function play(place,musicFile) {
         if (lowerName.endsWith('.mp3') || lowerName.endsWith('.m4a')) {
             audioB.src = url;
             audioB.style.display = 'block';
+            changeVolume()
             await audioB.play();
             audioB.currentTime = now.getMinutes()*60+now.getSeconds()+now.getMilliseconds()/1000
         } else if (lowerName.endsWith('.webm') || lowerName.endsWith('.mkv') || lowerName.endsWith(".mp4")) {
             videoB.src = url;
             videoB.style.display = 'block';
+            changeVolume()
             await videoB.play();
         }
     } else if (place === "m") {
         music.savePlayed(musicFile.path)
         setProperty(musicFile)
+        setMetadata(musicFile)
         audioM.style.display = "none"
         videoM.style.display = "none"
         audioM.pause()
@@ -930,15 +934,18 @@ async function play(place,musicFile) {
         if (lowerName.endsWith('.mp3') || lowerName.endsWith('.m4a')) {
             audioM.src = url;
             audioM.style.display = 'block';
+            changeVolume()
             await audioM.play();
         } else if (lowerName.endsWith('.webm') || lowerName.endsWith('.mkv') || lowerName.endsWith(".mp4")) {
             videoM.src = url;
             videoM.style.display = 'block';
+            changeVolume()
             await videoM.play();
         }
     } else if (place === "j") {
         music.savePlayed(musicFile.path)
         setProperty(musicFile)
+        setMetadata(musicFile)
         const now = newDate()
         if (now.getMinutes() === 0) {
             playBeep("C6")
@@ -959,10 +966,12 @@ async function play(place,musicFile) {
         if (lowerName.endsWith('.mp3') || lowerName.endsWith('.m4a')) {
             audioJ.src = url;
             audioJ.style.display = 'block';
+            changeVolume()
             await audioJ.play();
         } else if (lowerName.endsWith('.webm') || lowerName.endsWith('.mkv') || lowerName.endsWith(".mp4")) {
             videoJ.src = url;
             videoJ.style.display = 'block';
+            changeVolume()
             await videoJ.play();
         }
     }
@@ -1001,12 +1010,14 @@ audioB.onended = videoB.onended = () => {
     playBGM()
     audioB.style.display = "none";
     videoB.style.display = "none;"
+    changeVolume()
 }
 
 audioM.onended = videoM.onended = () => {
     playMusic()
     audioM.style.display = "none";
     videoM.style.display = "none";
+    changeVolume()
 }
 
 audioJ.onended = videoJ.onended = () => {
@@ -1014,6 +1025,7 @@ audioJ.onended = videoJ.onended = () => {
     playMusic()
     audioJ.style.display = "none";
     videoJ.style.display = "none";
+    changeVolume()
 }
 
 function setProperty(music) {
@@ -1065,7 +1077,6 @@ function playMusic() {
             hourlyMusic = allMusic
         }
     }
-    console.log(hourlyMusic)
 
     let unPlayedMusic = music.getUnPlayedMusicByPlayed(document.getElementById("leastPlayed").value-0,hourlyMusic)
     if (unPlayedMusic.length === 0) {
@@ -1127,13 +1138,80 @@ function getSpeed() {
     }
 }
 
+function setMetadata(music) {
+    if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: music.name,
+            artist: music.cover,
+            artwork: [{ src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' }]
+    });
+
+        // 再生・一時停止ボタンをシステムと連携させる
+        navigator.mediaSession.setActionHandler('play', () => {audioM.play();videoM.play();audioJ.play();videoJ.play();});
+        navigator.mediaSession.setActionHandler('pause', () => {audioM.pause();videoM.pause();audioJ.pause();videoJ.pause();});
+}
+}
+
+function changeVolume(volarg=undefined) {
+    const barVolume = Number(document.getElementById("volumeBar").value)/100
+    const inputVolume = Number(document.getElementById("volumeInput").value)/100
+    const checkbox = document.getElementById("muteCheckBox").checked
+
+    if (volarg) {
+        document.getElementById("volumeInput").value = volarg
+        document.getElementById("volumeBar").value = volarg
+    }
+
+    let isPlaying = undefined
+    const volume = Number(document.getElementById("volumeBar").value)/100
+
+    const videoM_Display = window.getComputedStyle(videoM).display
+    const audioM_Display = window.getComputedStyle(audioM).display
+    const videoJ_Display = window.getComputedStyle(videoJ).display
+    const audioJ_Display = window.getComputedStyle(audioJ).display
+
+    if (videoM_Display === "block" || audioM_Display === "block" || videoJ_Display == "block" || audioJ_Display == "block") {
+        isPlaying = true
+    }else {
+        isPlaying = false
+    }
+    
+
+    let bVol = !isPlaying*!checkbox*volume
+    let mjVol = isPlaying*!checkbox*volume
+    let seVol = !checkbox*volume
+
+    audioB.volume = bVol
+    videoB.volume = bVol
+    audioM.volume = mjVol
+    videoM.volume = mjVol
+    audioJ.volume = mjVol
+    videoJ.volume = mjVol
+    audioSE.volume = seVol
+
+    document.getElementById("volume").innerText = `BGM:${bVol*100}\nMusic:${mjVol*100}`
+}
+
+document.getElementById("volumeBar").addEventListener("input",function() {
+    changeVolume(Number(document.getElementById("volumeBar").value))
+})
+
+document.getElementById("volumeInput").addEventListener("input",function() {
+    changeVolume(Number(document.getElementById("volumeInput").value))
+})
+
 startButton.addEventListener("click",function() {
     onStarted()
     playMusic()
     if (document.getElementById("timeSignalBool").checked) {
         setSignal()
     }
+    if (document.getElementById("bgmBool").checked) {
+        playBGM()
+    }
 })
+
+
 
     </script>
 </html>

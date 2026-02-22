@@ -27,6 +27,10 @@ def watch_clipboard():
                 if "youtu" in link or "nicovideo" in link:
                     if "&list" in link:
                         link = link.split("&list")[0]
+                    
+                    if "&pp" in link:
+                        link = link.split("&pp")[0]
+                        
 
                     if link not in existing_links:
                         with open(target_file,"a",encoding="utf-8") as f:

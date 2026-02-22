@@ -241,7 +241,7 @@ class download:
             print(f"[{i}/{length}]",end="")
             if url:
                 self.download_urls(url,i,length)
-                time.sleep(120)
+                time.sleep(20)
             
             i += 1
 
