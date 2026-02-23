@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-16</p>
+<p>v6.1 β-17</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -615,21 +615,6 @@ async function load(files) {
     const staticsMap = new Map(statics.staticsJson.map(j => [j.path,j]))
 
 
-    const results = musicFiles.map(file => {
-        const fileName = file.name.replace(/\.[^/.]+$/, "");
-        const d = playedMap.get(fileName); // メモリ内検索
-        
-        const played = d ? (d.played ?? 0) : 0;
-        const lastPlayed = d ? d.lastPlayed : null;
-
-        const json = staticsMap.get(fileName)
-        
-        return new Music(file, played, lastPlayed,json);
-    })
-
-    for (const m of results) {
-        music.push(m)
-    }
 
     let loaded = 0
     const total = musicFiles.length
