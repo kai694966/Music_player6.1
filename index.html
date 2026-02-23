@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-17</p>
+<p>v6.1 β-18</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -514,7 +514,7 @@ readFolder.addEventListener("click",async function() {/*ファイルを読み込
 
             if (permission === "granted" || await data.handle.requestPermission({mode: "read" }) === "granted") {
                 const files = await getAllFiles(data.handle);
-                globals.save("files",files)
+                //globals.save("files",files)
                 load(files)
                 document.getElementById("folderLoad").innerText = `読み込み完了:${data.handle.name}`
                 showAfterInput()
@@ -528,7 +528,6 @@ readFolder.addEventListener("click",async function() {/*ファイルを読み込
 })
 
 async function getAllFiles(dirHandle, path = '') {
-    // 1. 全階層の「ハンドル」を再帰的に集める内部関数
     async function collectEntries(handle, currentPath) {
         const results = [];
         for await (const entry of handle.values()) {
@@ -536,7 +535,6 @@ async function getAllFiles(dirHandle, path = '') {
             if (entry.kind === 'file') {
                 results.push({ entry, newPath });
             } else if (entry.kind === 'directory') {
-                // サブフォルダの中身を再帰的に取得して結合
                 const subResults = await collectEntries(entry, newPath);
                 results.push(...subResults);
             }
@@ -544,19 +542,29 @@ async function getAllFiles(dirHandle, path = '') {
         return results;
     }
 
-    // 全エントリをフラットな配列として取得（ここではまだ getFile しない）
     const allEntries = await collectEntries(dirHandle, path);
 
-    // 2. 集まったハンドルに対して、並列で getFile を実行
-    // Androidの負荷を考え、Promise.all で一気に並列化します
-    const files = await Promise.all(allEntries.map(async ({ entry, newPath }) => {
-        const file = await entry.getFile();
-        Object.defineProperty(file, 'relativePath', {
-            value: newPath,
-            writable: false
-        });
-        return file;
-    }));
+    // 一度に処理する数を制限（5〜20で調整）
+    const CHUNK_SIZE = 10;
+    const files = [];
+
+    for (let i = 0; i < allEntries.length; i += CHUNK_SIZE) {
+        const chunk = allEntries.slice(i, i + CHUNK_SIZE);
+        const chunkFiles = await Promise.all(chunk.map(async ({ entry, newPath }) => {
+            const file = await entry.getFile();
+            Object.defineProperty(file, 'relativePath', {
+                value: newPath,
+                writable: false
+            });
+            return file;
+        }));
+        files.push(...chunkFiles);
+
+        // 進捗表示（任意）
+        document.getElementById("folderLoad").innerText = 
+            `ファイル取得中[${Math.min(i + CHUNK_SIZE, allEntries.length)}/${allEntries.length}]`;
+        await new Promise(r => setTimeout(r, 0)); // UIをブロックしない
+    }
 
     return files;
 }
