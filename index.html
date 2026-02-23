@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-13</p>
+<p>v6.1 β-14</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -595,7 +595,11 @@ async function load(files) {
             return new Music(file,played,lastPlayed)
         })
 
-    music = await Promise.all(musicPromises)
+    const musics = await Promise.all(musicPromises)
+
+    for (const m of musics) {
+        music.push(m)
+    }
 
     onFileLoaded()
 }
