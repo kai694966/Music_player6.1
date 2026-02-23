@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-15</p>
+<p>v6.1 β-16</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -528,24 +528,36 @@ readFolder.addEventListener("click",async function() {/*ファイルを読み込
 })
 
 async function getAllFiles(dirHandle, path = '') {
-    const files = [];
-    
-    for await (const entry of dirHandle.values()) {
-        const newPath = path ? `${path}/${entry.name}` : entry.name;
-        
-        if (entry.kind === 'file') {
-            const file = await entry.getFile();
-            Object.defineProperty(file, 'relativePath', {
-                value: newPath,
-                writable: false
-            });
-            files.push(file);
-        } else if (entry.kind === 'directory') {
-            const subFiles = await getAllFiles(entry, newPath);
-            files.push(...subFiles);
+    // 1. 全階層の「ハンドル」を再帰的に集める内部関数
+    async function collectEntries(handle, currentPath) {
+        const results = [];
+        for await (const entry of handle.values()) {
+            const newPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
+            if (entry.kind === 'file') {
+                results.push({ entry, newPath });
+            } else if (entry.kind === 'directory') {
+                // サブフォルダの中身を再帰的に取得して結合
+                const subResults = await collectEntries(entry, newPath);
+                results.push(...subResults);
+            }
         }
+        return results;
     }
-    
+
+    // 全エントリをフラットな配列として取得（ここではまだ getFile しない）
+    const allEntries = await collectEntries(dirHandle, path);
+
+    // 2. 集まったハンドルに対して、並列で getFile を実行
+    // Androidの負荷を考え、Promise.all で一気に並列化します
+    const files = await Promise.all(allEntries.map(async ({ entry, newPath }) => {
+        const file = await entry.getFile();
+        Object.defineProperty(file, 'relativePath', {
+            value: newPath,
+            writable: false
+        });
+        return file;
+    }));
+
     return files;
 }
 
@@ -619,6 +631,27 @@ async function load(files) {
         music.push(m)
     }
 
+    let loaded = 0
+    const total = musicFiles.length
+
+    for (const m of musicFiles) {
+        const fileName = m.name.replace(/\.[^/.]+$/,"")
+        const d = playedMap.get(fileName)
+        const json = staticsMap.get(fileName)
+
+        const played = d ? (d.played ?? 0) : 0
+        const lastPlayed = d ? d.lastPlayed : 0
+
+        const _ = new Music(m,played,lastPlayed,json)
+        music.push(_)
+        loaded++
+
+        if (loaded % 20 === 0 || loaded === total) {
+            document.getElementById("folderLoad").innerText = `読み込み中[${loaded}/${total}]`
+            await new Promise(resolve => setTimeout(resolve,0))
+        }
+    }
+
     console.log(music.musics)
 
     onFileLoaded()
@@ -668,10 +701,13 @@ class Music {
     constructor(file,played=0,lastPlayed,json) {
 
         let fileName = file.name
-        try {
-            fileName = decodeURIComponent(fileName)
-        } catch (e) {
-            console.error(`${fileName}のデコードに失敗しました`)
+
+        if (fileName.includes("%")) {
+            try {
+                fileName = decodeURIComponent(fileName)
+            } catch (e) {
+                console.error(`${fileName}のデコードに失敗しました`)
+            }
         }
         fileName = fileName.split(/[\\/]/).pop().replace(/\.[^/.]+$/,"")
 
