@@ -1,6 +1,6 @@
 {
-  "name": "Music_player 5.1",
-  "short_name": "Mp5.1",
+  "name": "Music_player 6.1",
+  "short_name": "Mp6.1",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
