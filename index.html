@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-9</p>
+<p>v6.1 β-10</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -198,6 +198,8 @@ const audioSE = document.getElementById("SE_Audio")
 
 let isInSleepMode = false
 let idleTimer
+let haveSetMusic = false
+let haveSetSignal = false
 
 /*プロパティのShow/Hide/Disabled*/
 function hide() {
@@ -1035,6 +1037,7 @@ audioB.onended = videoB.onended = () => {
 }
 
 audioM.onended = videoM.onended = () => {
+    haveSetMusic = false
     if (!isInSleepMode) {
         playMusic()
     }
@@ -1044,6 +1047,7 @@ audioM.onended = videoM.onended = () => {
 }
 
 audioJ.onended = videoJ.onended = () => {
+    haveSetSignal = false
     if (!isInSleepMode) {
         setSignal()
         playMusic()
@@ -1102,6 +1106,8 @@ function playMusic() {
 　ランダムに選ぶ done
     */
 
+    if (haveSetMusic) {return}
+
     const now = newDate()
 
     const allMusic = music.getAllMusic()
@@ -1150,16 +1156,19 @@ function playMusic() {
         const betweenSong = Number(document.getElementById("betweenSong").value)
         console.debug(`次に再生:${playMusic.name},${betweenSong}秒後`)
         setTimeout(play,betweenSong*1000,"m",playMusic)
+        haveSetMusic = true
     }
 }
 
 function setSignal() {
+    if (haveSetSignal) {return}
     const nextSignal = music.getNextSignal()
     const time = music.getNextTime(nextSignal.music.signal)
     const now = newDate()
     const timeToSignal = time - now
 
     setTimeout(play,timeToSignal,"j",nextSignal.music)
+    haveSetSignal = true
 }
 
 function getWeather() {
@@ -1252,7 +1261,8 @@ startButton.addEventListener("click",function() {
         playBGM()
     }
     if (document.getElementById("sleepMode").checked) {
-        idleTimer = setTimeout(activateIdleMode,Number(document.getElementById("sleepModeInput").value)*60*1000);
+        isInSleepMode = true
+        resetIdleTimer();
         ["mousemove","mousedown","keydown","touchstart"].forEach(e => {
             window.addEventListener(e,resetIdleTimer,{passive:true})
         })
