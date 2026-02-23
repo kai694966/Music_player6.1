@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-11</p>
+<p>v6.1 β-12</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -555,6 +555,7 @@ async function getPathOfInputFolder(filePathDB) {
 }
 
 async function load(files) {
+    console.debug("start loading files")
     statics.setFile(files);
 
     const Settings = files.find(f => f.name === "Settings.json")
@@ -577,6 +578,7 @@ async function load(files) {
     statics.setSettings(settingsJson)
     statics.setStatics(staticsJson)
     loadSettings(settingsJson)
+    console.debug("found:settings.json,statics.json")
 
     for (const file of files) {
         if (file.name === "Settings.json") {
@@ -592,6 +594,7 @@ async function load(files) {
             const played = data ? (data.played ?? 0) : 0
             const lastPlayed = data ? data.lastPlayed : null
             music.push(new Music(file,played,lastPlayed))
+            console.log(file.name)
         }
     }
     onFileLoaded()
