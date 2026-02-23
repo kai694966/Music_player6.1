@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-18</p>
+<p>v6.1 β-19</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -545,7 +545,7 @@ async function getAllFiles(dirHandle, path = '') {
     const allEntries = await collectEntries(dirHandle, path);
 
     // 一度に処理する数を制限（5〜20で調整）
-    const CHUNK_SIZE = 10;
+    const CHUNK_SIZE = 50;
     const files = [];
 
     for (let i = 0; i < allEntries.length; i += CHUNK_SIZE) {
