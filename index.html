@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-19</p>
+<p>v6.1 β-20</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -563,7 +563,6 @@ async function getAllFiles(dirHandle, path = '') {
         // 進捗表示（任意）
         document.getElementById("folderLoad").innerText = 
             `ファイル取得中[${Math.min(i + CHUNK_SIZE, allEntries.length)}/${allEntries.length}]`;
-        await new Promise(r => setTimeout(r, 0)); // UIをブロックしない
     }
 
     return files;
