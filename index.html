@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-12</p>
+<p>v6.1 β-13</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -555,48 +555,48 @@ async function getPathOfInputFolder(filePathDB) {
 }
 
 async function load(files) {
-    console.debug("start loading files")
     statics.setFile(files);
 
-    const Settings = files.find(f => f.name === "Settings.json")
-    const Statics = files.find(f => f.name === "Statics.json")
+    const fileMap = new Map(files.map(f=>[f.name,f]))
+
+    const Settings = fileMap.get("Settings.json")
+    const Statics = fileMap.get("Statics.json")
+
+    if (!Settings) {alert("Settings.jsonが見つかりません")}
+    if (!Statics) {alert("Statics.jsonが見つかりません")}
 
     const settingsText = await Settings.text()
     const staticsText = await Statics.text()
 
     const settingsJson = JSON.parse(settingsText)
-    let staticsJson = JSON.parse(staticsText)
 
-    staticsJson = staticsJson.map(track => {
+    const staticsJson = JSON.parse(staticsText).map(track => {
         if (track.path) {
             const fileName = track.path.split(/[\\/]/).pop().replace(/\.[^/.]+$/,"")
             return {...track,path:fileName}
         }
+        return track
     })
 
 
     statics.setSettings(settingsJson)
     statics.setStatics(staticsJson)
     loadSettings(settingsJson)
-    console.debug("found:settings.json,statics.json")
 
-    for (const file of files) {
-        if (file.name === "Settings.json") {
-            undefined
-        } else if (file.name === "Statics.json") {
-            undefined
-        } else {
-            const realFile = files.find(f => f.name === file.path)
+    const musicPromises = files
+        .filter(f => f.name !== "Settings.json" && f.name !== "Statics.json")
+        .map(async (file) => {
+            const fileName = file.name.replace(/\.[^/.]/,"")
 
-            
-            const fileName = file.name.replace(/\.[^/.]+$/, "")
             const data = await db.get("FilePlayed",fileName)
             const played = data ? (data.played ?? 0) : 0
             const lastPlayed = data ? data.lastPlayed : null
-            music.push(new Music(file,played,lastPlayed))
-            console.log(file.name)
-        }
-    }
+
+            return new Music(file,played,lastPlayed)
+        })
+
+    music = await Promise.all(musicPromises)
+
     onFileLoaded()
 }
 
