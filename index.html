@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-20</p>
+<p>v6.1 β-21</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -1083,30 +1083,30 @@ function playBGM() {
 }
 
 audioB.onended = videoB.onended = () => {
-    playBGM()
     audioB.style.display = "none";
-    videoB.style.display = "none;"
+    videoB.style.display = "none;";
+    playBGM()
     changeVolume()
 }
 
 audioM.onended = videoM.onended = () => {
+    audioM.style.display = "none";
+    videoM.style.display = "none";
     haveSetMusic = false
     if (!isInSleepMode) {
         playMusic()
     }
-    audioM.style.display = "none";
-    videoM.style.display = "none";
     changeVolume()
 }
 
 audioJ.onended = videoJ.onended = () => {
+    audioJ.style.display = "none";
+    videoJ.style.display = "none";
     haveSetSignal = false
     if (!isInSleepMode) {
         setSignal()
         playMusic()
     }
-    audioJ.style.display = "none";
-    videoJ.style.display = "none";
     changeVolume()
 }
 
