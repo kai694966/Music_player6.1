@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-14</p>
+<p>v6.1 β-15</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -464,6 +464,18 @@ class DB {
             request.onerror = () => reject(new Error(`Failed to get from ${storeName}`));
         });
     }
+
+    async getAll(storeName) {
+        await this.open()
+        return new Promise((resolve,reject) => {
+            const transaction = this.db.transaction([storeName],"readonly")
+            const store = transaction.objectStore(storeName)
+            const request = store.getAll()
+            request.onsuccess = () => resolve(request.result)
+            request.onerror = () => reject(console.error("DBの取得エラー"))
+            
+        })
+    }
 }
 
 /**/
@@ -494,6 +506,7 @@ document.getElementById("selectFolder").addEventListener("click",async function(
 
 readFolder.addEventListener("click",async function() {/*ファイルを読み込みボタンが押されたとき*/
     try {
+        document.getElementById("folderLoad").innerText = `読み込み開始`
         const data = await db.get("InputFolderPath","path")
 
         if (data && data.handle) {
@@ -557,7 +570,11 @@ async function getPathOfInputFolder(filePathDB) {
 async function load(files) {
     statics.setFile(files);
 
-    const fileMap = new Map(files.map(f=>[f.name,f]))
+    const allData = await db.getAll("FilePlayed")
+    const playedMap = new Map(allData.map(d => [d.name,d]))
+    const fileMap = new Map(files.map(f=>[f.name,f]))//f.path?
+
+    const musicFiles = files.filter(f => f.name !== "Settings.json" && f.name !== "Statics.json")
 
     const Settings = fileMap.get("Settings.json")
     const Statics = fileMap.get("Statics.json")
@@ -583,23 +600,26 @@ async function load(files) {
     statics.setStatics(staticsJson)
     loadSettings(settingsJson)
 
-    const musicPromises = files
-        .filter(f => f.name !== "Settings.json" && f.name !== "Statics.json")
-        .map(async (file) => {
-            const fileName = file.name.replace(/\.[^/.]/,"")
+    const staticsMap = new Map(statics.staticsJson.map(j => [j.path,j]))
 
-            const data = await db.get("FilePlayed",fileName)
-            const played = data ? (data.played ?? 0) : 0
-            const lastPlayed = data ? data.lastPlayed : null
 
-            return new Music(file,played,lastPlayed)
-        })
+    const results = musicFiles.map(file => {
+        const fileName = file.name.replace(/\.[^/.]+$/, "");
+        const d = playedMap.get(fileName); // メモリ内検索
+        
+        const played = d ? (d.played ?? 0) : 0;
+        const lastPlayed = d ? d.lastPlayed : null;
 
-    const musics = await Promise.all(musicPromises)
+        const json = staticsMap.get(fileName)
+        
+        return new Music(file, played, lastPlayed,json);
+    })
 
-    for (const m of musics) {
+    for (const m of results) {
         music.push(m)
     }
+
+    console.log(music.musics)
 
     onFileLoaded()
 }
@@ -645,7 +665,7 @@ class Globals {
 }
 
 class Music {
-    constructor(file,played=0,lastPlayed) {
+    constructor(file,played=0,lastPlayed,json) {
 
         let fileName = file.name
         try {
@@ -655,14 +675,12 @@ class Music {
         }
         fileName = fileName.split(/[\\/]/).pop().replace(/\.[^/.]+$/,"")
 
-        const json = statics.staticsJson.find(json => json.path === fileName)
-
         this.type = json.type
 
         if (this.type === "bgm") {
             this.hour = json.hour
             this.file = file
-        } else if (this.type = "music") {
+        } else if (this.type === "music") {
             this.path = json.path
             this.name = json.name
             this.cover = json.cover
