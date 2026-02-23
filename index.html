@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-22</p>
+<p>v6.1 β-23</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -472,7 +472,7 @@ class DB {
             const store = transaction.objectStore(storeName)
             const request = store.getAll()
             request.onsuccess = () => resolve(request.result)
-            request.onerror = () => reject(console.error("DBの取得エラー"))
+            request.onerror = (element) => reject(console.error(`DBの取得エラー:${e}`))
             
         })
     }
@@ -967,7 +967,7 @@ class MusicManager {
 
 
 const globals = new Globals()
-const db = new DB("MusicPlayerDB_61",1,{
+const db = new DB("MusicPlayerDB_61",2,{
     "FilePlayed":"path",
     "InputFolderPath":"path",
 })
