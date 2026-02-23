@@ -792,7 +792,7 @@ class MusicManager {
         return result
     }
 
-    getMusicByTimeToItsSignal(minute,musics = this.music) {
+    getMusicByTimeToItsSignal(minute,musics = this.musics) {
         const _musics = this.getMusicByType("music",false,musics)
         const now = newDate()
         const result = _musics.filter(music => {
@@ -805,7 +805,7 @@ class MusicManager {
         return result
     }
 
-    getMusicByTimeToSignal(musics = this.music) {
+    getMusicByTimeToSignal(musics = this.musics) {
         const now = newDate()
         const nextSignal = this.getNextSignal().time
         const timeToSignal = nextSignal-now
@@ -817,7 +817,7 @@ class MusicManager {
         return result
     }
 
-    chooseMusic(musics = this.music) {
+    chooseMusic(musics = this.musics) {
         const speed = getSpeed()
         const weather = getWeather()
         const _musics = this.getMusicByType("music","any",musics)
@@ -949,16 +949,17 @@ class MusicManager {
 
     async savePlayed(name) {
         const index = this.musics.find(music => music.path === name)
+        console.debug(`savePlayed:${index}`)
         const played = index.played ?? 0
+        console.debug(`played:${played} + 1`)
         index.played++
         index.lastPlayed = newDate().getTime()
+        console.debug(`lastPlayed:${index.lastPlayed}`)
         await db.save("FilePlayed",{
             "path":name,
             "played":played+1,
             "lastPlayed":newDate().getTime()
         })
-
-
     }
 
 }
