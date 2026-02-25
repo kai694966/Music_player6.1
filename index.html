@@ -78,7 +78,7 @@
 
     <input type="checkbox" id="sleepMode">
     <label for="sleepMode">休止モード:分</label>
-    <input type="number" id="sleepModeInput" min="0" max="120" value="60">
+    <input type="number" id="sleepModeInput" min="0" max="1440" value="60">
 
     <br>
     <br>
@@ -948,6 +948,9 @@ class MusicManager {
     }
 
     async savePlayed(name) {
+
+        if (document.getElementById("sleepMode").checked) {return}
+
         const index = this.musics.find(music => music.path === name)
         console.debug(`savePlayed`)
         console.debug(index)
