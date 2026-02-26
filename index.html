@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-26</p>
+<p>v6.1 β-27</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -1098,9 +1098,8 @@ audioM.onended = videoM.onended = () => {
     audioM.style.display = "none";
     videoM.style.display = "none";
     haveSetMusic = false
-    if (!isInSleepMode) {
-        playMusic()
-    }
+    playMusic()
+    
     changeVolume()
 }
 
@@ -1108,10 +1107,9 @@ audioJ.onended = videoJ.onended = () => {
     audioJ.style.display = "none";
     videoJ.style.display = "none";
     haveSetSignal = false
-    if (!isInSleepMode) {
-        setSignal()
-        playMusic()
-    }
+    setSignal()
+    playMusic()
+    
     changeVolume()
 }
 
@@ -1289,12 +1287,13 @@ function changeVolume(volarg=undefined) {
     }
 
     // isPlaying,inSleepMode
-    //f,f->1 1:mjVol=1,bVol=0
-    //t,f->0 0:mjVol=0,bVol=1
+    //f,f->0 1:mjVol=1,bVol=0
+    //t,f->1 0:mjVol=0,bVol=1
     //f,t->0
-    //f,f->1
+    //t,t->0
 
-    const bool = Math.abs(isPlaying-isInSleepMode)   
+
+    const bool = !(isPlaying && !isInSleepMode)
     
     //bool:BGMを流すべき時に1
 
