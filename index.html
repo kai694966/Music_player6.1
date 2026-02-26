@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-24</p>
+<p>v6.1 β-25</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -1261,6 +1261,9 @@ function setMetadata(music) {
 }
 }
 
+document.getElementById("muteCheckBox").addEventListener("click",changeVolume,1-Number(document.getElementById("muteCheckBox").checked)
+)
+
 function changeVolume(volarg=undefined) {
     const barVolume = Number(document.getElementById("volumeBar").value)/100
     const inputVolume = Number(document.getElementById("volumeInput").value)/100
@@ -1284,11 +1287,20 @@ function changeVolume(volarg=undefined) {
     }else {
         isPlaying = false
     }
-    
 
-    let bVol = !isPlaying*!checkbox*volume
-    let mjVol = isPlaying*!checkbox*volume
-    let seVol = !checkbox*volume
+    // isPlaying,inSleepMode
+    //f,f->1 1:mjVol=1,bVol=0
+    //t,f->0 0:mjVol=0,bVol=1
+    //f,t->0
+    //f,f->1
+
+    const bool = Math.abs(isPlaying-inSleepMode)   
+    
+    //bool:BGMを流すべき時に1
+
+    let bVol =   bool*!checkbox*volume
+    let mjVol = !bool*!checkbox*volume
+    let seVol =       !checkbox*volume
 
     audioB.volume = bVol
     videoB.volume = bVol
