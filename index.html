@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-27</p>
+<p>v6.1 β-28</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -1121,6 +1121,7 @@ function resetIdleTimer() {
         playMusic()
         clearTimeout(idleTimer)
         idleTimer = setTimeout(activateIdleMode,Number(document.getElementById("sleepModeInput").value)*60*1000)
+        changeVolume()
     }
 }
 
@@ -1259,8 +1260,9 @@ function setMetadata(music) {
 }
 }
 
-document.getElementById("muteCheckBox").addEventListener("click",changeVolume,1-Number(document.getElementById("muteCheckBox").checked)
-)
+document.getElementById("muteCheckBox").addEventListener("click",function() {
+    changeVolume(1-Number(document.getElementById("muteCheckBox").checked))
+})
 
 function changeVolume(volarg=undefined) {
     const barVolume = Number(document.getElementById("volumeBar").value)/100
