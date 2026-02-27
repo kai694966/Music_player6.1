@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-29</p>
+<p>v6.1 β-30</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -200,6 +200,10 @@ let isInSleepMode = false
 let idleTimer
 let haveSetMusic = false
 let haveSetSignal = false
+
+let urlB
+let urlM
+let urlJ
 
 /*プロパティのShow/Hide/Disabled*/
 function hide() {
@@ -982,27 +986,29 @@ const statics = new Statics()
 
 /*function play*/
 async function play(place,musicFile) {
-    const url = URL.createObjectURL(musicFile.file)
-    const lowerName = musicFile.file.name.toLowerCase()
     if (place === "b") {
+        urlB = URL.createObjectURL(musicFile.file)
+        const lowerName = musicFile.file.name.toLowerCase()
         audioB.style.display = "none"
         videoB.style.display = "none"
         audioB.pause()
         videoB.pause()
         const now = newDate()
         if (lowerName.endsWith('.mp3') || lowerName.endsWith('.m4a')) {
-            audioB.src = url;
+            audioB.src = urlB;
             audioB.style.display = 'block';
             changeVolume()
             await audioB.play();
             audioB.currentTime = now.getMinutes()*60+now.getSeconds()+now.getMilliseconds()/1000
         } else if (lowerName.endsWith('.webm') || lowerName.endsWith('.mkv') || lowerName.endsWith(".mp4")) {
-            videoB.src = url;
+            videoB.src = urlB;
             videoB.style.display = 'block';
             changeVolume()
             await videoB.play();
         }
     } else if (place === "m") {
+        urlM = URL.createObjectURL(musicFile.file)
+        const lowerName = musicFile.file.name.toLowerCase()
         music.savePlayed(musicFile.path)
         setProperty(musicFile)
         setMetadata(musicFile)
@@ -1013,17 +1019,19 @@ async function play(place,musicFile) {
         document.getElementById("nowPlaying").textContent = "再生中: " + musicFile.file.name.replace(/\.[^/.]+$/, "");
         document.title = musicFile.file.name.replace(/\.[^/.]+$/, "")
         if (lowerName.endsWith('.mp3') || lowerName.endsWith('.m4a')) {
-            audioM.src = url;
+            audioM.src = urlM;
             audioM.style.display = 'block';
             changeVolume()
             await audioM.play();
         } else if (lowerName.endsWith('.webm') || lowerName.endsWith('.mkv') || lowerName.endsWith(".mp4")) {
-            videoM.src = url;
+            videoM.src = urlM;
             videoM.style.display = 'block';
             changeVolume()
             await videoM.play();
         }
     } else if (place === "j") {
+        urlJ = URL.createObjectURL(musicFile.file)
+        const lowerName = musicFile.file.name.toLowerCase()
         music.savePlayed(musicFile.path)
         setProperty(musicFile)
         setMetadata(musicFile)
@@ -1045,12 +1053,12 @@ async function play(place,musicFile) {
         document.getElementById("nowPlaying").textContent = "再生中: " + musicFile.file.name.replace(/\.[^/.]+$/, "");
         document.title = musicFile.file.name.replace(/\.[^/.]+$/, "")
         if (lowerName.endsWith('.mp3') || lowerName.endsWith('.m4a')) {
-            audioJ.src = url;
+            audioJ.src = urlJ;
             audioJ.style.display = 'block';
             changeVolume()
             await audioJ.play();
         } else if (lowerName.endsWith('.webm') || lowerName.endsWith('.mkv') || lowerName.endsWith(".mp4")) {
-            videoJ.src = url;
+            videoJ.src = urlJ;
             videoJ.style.display = 'block';
             changeVolume()
             await videoJ.play();
@@ -1088,13 +1096,15 @@ function playBGM() {
 }
 
 audioB.onended = videoB.onended = () => {
+    URL.revokeObjectURL(urlB)
     audioB.style.display = "none";
-    videoB.style.display = "none;";
+    videoB.style.display = "none";
     playBGM()
     changeVolume()
 }
 
 audioM.onended = videoM.onended = () => {
+    URL.revokeObjectURL(urlM)
     audioM.style.display = "none";
     videoM.style.display = "none";
     haveSetMusic = false
@@ -1104,6 +1114,7 @@ audioM.onended = videoM.onended = () => {
 }
 
 audioJ.onended = videoJ.onended = () => {
+    URL.revokeObjectURL(urlJ)
     audioJ.style.display = "none";
     videoJ.style.display = "none";
     haveSetSignal = false
