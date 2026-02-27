@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-28</p>
+<p>v6.1 β-29</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -948,9 +948,6 @@ class MusicManager {
     }
 
     async savePlayed(name) {
-
-        if (document.getElementById("sleepMode").checked) {return}
-
         const index = this.musics.find(music => music.path === name)
         console.debug(`savePlayed`)
         console.debug(index)
@@ -959,6 +956,9 @@ class MusicManager {
         index.played++
         index.lastPlayed = newDate().getTime()
         console.debug(`lastPlayed:${index.lastPlayed}`)
+
+        if (document.getElementById("sleepMode").checked) {return}
+
         await db.save("FilePlayed",{
             "path":name,
             "played":played+1,
@@ -1254,14 +1254,40 @@ function setMetadata(music) {
             artwork: [{ src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' }]
     });
 
+    const videoM_Display = window.getComputedStyle(videoM).display
+    const audioM_Display = window.getComputedStyle(audioM).display
+    const videoJ_Display = window.getComputedStyle(videoJ).display
+    const audioJ_Display = window.getComputedStyle(audioJ).display
+
+    let mPlaying
+    let jPlaying
+
+    if (videoM_Display === "block" || audioM_Display === "block") {
+        mPlaying = true
+    }else {
+        mPlaying = false
+    }
+
+    if (videoJ_Display === "block" || audioJ_Display === "block") {
+        jPlaying = true
+    } else {
+        jPlaying = false
+    }
+
         // 再生・一時停止ボタンをシステムと連携させる
-        navigator.mediaSession.setActionHandler('play', () => {audioM.play();videoM.play();audioJ.play();videoJ.play();});
-        navigator.mediaSession.setActionHandler('pause', () => {audioM.pause();videoM.pause();audioJ.pause();videoJ.pause();});
+    navigator.mediaSession.setActionHandler('play', () => {
+        if (mPlaying) {audioM.play();videoM.play();}
+        if (jPlaying) {audioJ.play();videoJ.play();}
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+        if (mPlaying) {audioM.pause();videoM.pause();}
+        if (jPlaying) {audioJ.pause();videoJ.pause();}
+    });
 }
 }
 
 document.getElementById("muteCheckBox").addEventListener("click",function() {
-    changeVolume(1-Number(document.getElementById("muteCheckBox").checked))
+    document.getElementById("muteCheckBox").checked ? changeVolume(0) : changeVolume(Number(document.getElementById("volumeInput").value))
 })
 
 function changeVolume(volarg=undefined) {
@@ -1272,6 +1298,14 @@ function changeVolume(volarg=undefined) {
     if (volarg) {
         document.getElementById("volumeInput").value = volarg
         document.getElementById("volumeBar").value = volarg
+    }
+
+    if (Number(document.getElementById("muteCheckBox").checked)) {
+        document.getElementById("volumeInput").disabled = true
+        document.getElementById("volumeBar").disabled = true
+    } else {
+        document.getElementById("volumeInput").disabled = false
+        document.getElementById("volumeBar").disabled = false
     }
 
     let isPlaying = undefined

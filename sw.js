@@ -1,4 +1,4 @@
-const CACHE_NAME = "v1";
+const CACHE_NAME = "29";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
@@ -19,6 +19,17 @@ self.addEventListener("fetch", event => {
   event.respondWith(
     caches.match(event.request).then(resp => {
       return resp || fetch(event.request);
+    })
+  );
+});
+
+// 古いキャッシュを消す処理を追加
+self.addEventListener("activate", event => {
+  event.waitUntil(
+    caches.keys().then(keys => {
+      return Promise.all(
+        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+      );
     })
   );
 });
