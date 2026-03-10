@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-30</p>
+<p>v6.1 β-31</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -201,9 +201,9 @@ let idleTimer
 let haveSetMusic = false
 let haveSetSignal = false
 
-let urlB
-let urlM
-let urlJ
+let musicB
+let musicM
+let musicJ
 
 /*プロパティのShow/Hide/Disabled*/
 function hide() {
@@ -517,9 +517,9 @@ readFolder.addEventListener("click",async function() {/*ファイルを読み込
             const permission = await data.handle.queryPermission({mode: "read" })
 
             if (permission === "granted" || await data.handle.requestPermission({mode: "read" }) === "granted") {
-                const files = await getAllFiles(data.handle);
-                //globals.save("files",files)
-                load(files)
+                const entries = await getAllFiles(data.handle)
+                console.log(entries)
+                load(entries)
                 document.getElementById("folderLoad").innerText = `読み込み完了:${data.handle.name}`
                 showAfterInput()
             }
@@ -546,30 +546,7 @@ async function getAllFiles(dirHandle, path = '') {
         return results;
     }
 
-    const allEntries = await collectEntries(dirHandle, path);
-
-    // 一度に処理する数を制限（5〜20で調整）
-    const CHUNK_SIZE = 50;
-    const files = [];
-
-    for (let i = 0; i < allEntries.length; i += CHUNK_SIZE) {
-        const chunk = allEntries.slice(i, i + CHUNK_SIZE);
-        const chunkFiles = await Promise.all(chunk.map(async ({ entry, newPath }) => {
-            const file = await entry.getFile();
-            Object.defineProperty(file, 'relativePath', {
-                value: newPath,
-                writable: false
-            });
-            return file;
-        }));
-        files.push(...chunkFiles);
-
-        // 進捗表示（任意）
-        document.getElementById("folderLoad").innerText = 
-            `ファイル取得中[${Math.min(i + CHUNK_SIZE, allEntries.length)}/${allEntries.length}]`;
-    }
-
-    return files;
+    return await collectEntries(dirHandle,path)
 }
 
 async function getPathOfInputFolder(filePathDB) {
@@ -590,63 +567,62 @@ async function getPathOfInputFolder(filePathDB) {
     }
 }
 
-async function load(files) {
-    statics.setFile(files);
+async function load(entries) {
+    const settingsEntry = entries.find(e => e.entry.name === "Settings.json");
+    const staticsEntry = entries.find(e => e.entry.name === "Statics.json")
 
-    const allData = await db.getAll("FilePlayed")
-    const playedMap = new Map(allData.map(d => [d.path,d]))
-    const fileMap = new Map(files.map(f=>[f.name,f]))//f.path?
+    if (!settingsEntry) {alert("Settings.jsonが見つかりません")}
+    if (!staticsEntry) {alert("Statics.jsonが見つかりません")}
 
-    const musicFiles = files.filter(f => f.name !== "Settings.json" && f.name !== "Statics.json")
+    const settingsFile = await settingsEntry.entry.getFile()
+    const staticsFile = await staticsEntry.entry.getFile()
 
-    const Settings = fileMap.get("Settings.json")
-    const Statics = fileMap.get("Statics.json")
-
-    if (!Settings) {alert("Settings.jsonが見つかりません")}
-    if (!Statics) {alert("Statics.jsonが見つかりません")}
-
-    const settingsText = await Settings.text()
-    const staticsText = await Statics.text()
-
-    const settingsJson = JSON.parse(settingsText)
-
-    const staticsJson = JSON.parse(staticsText).map(track => {
+    const settingsJson = JSON.parse(await settingsFile.text())
+    const staticsJson = JSON.parse(await staticsFile.text()).map(track => {
         if (track.path) {
             const fileName = track.path.split(/[\\/]/).pop().replace(/\.[^/.]+$/,"")
-            return {...track,path:fileName}
+            return {...track,path:fileName};
         }
-        return track
+        return track;
     })
-
 
     statics.setSettings(settingsJson)
     statics.setStatics(staticsJson)
-    loadSettings(settingsJson)
+
 
     const staticsMap = new Map(statics.staticsJson.map(j => [j.path,j]))
+    const allData = await db.getAll("FilePlayed")
+    const playedMap = new Map(allData.map(d => [d.path,d]))
+
+    const fileMap = new Map(entries.map(f=>[f.name,f]))
+
+    const musicEntry = entries.filter(e => 
+        e.entry.name !== "Settings.json" && e.entry.name !== "Statics.json"
+    )
+
+    loadSettings(settingsJson)
+
 
 
 
     let loaded = 0
-    const total = musicFiles.length
+    const total = musicEntry.length
 
-    for (const m of musicFiles) {
-        const fileName = m.name.replace(/\.[^/.]+$/,"")
+    for (const {entry,newPath} of musicEntry) {
+        console.log(entry,newPath)
+        const fileName = newPath.split(/[\\/]/).pop().replace(/\.[^/.]+$/, "")
         const d = playedMap.get(fileName)
         const json = staticsMap.get(fileName)
 
         const played = d ? (d.played ?? 0) : 0
         const lastPlayed = d ? d.lastPlayed : 0
 
-        const _ = new Music(m,played,lastPlayed,json)
+        const _ = new Music(entry,played,lastPlayed,json)
         music.push(_)
         loaded++
-
-        if (loaded % 20 === 0 || loaded === total) {
-            document.getElementById("folderLoad").innerText = `読み込み中[${loaded}/${total}]`
-            await new Promise(resolve => setTimeout(resolve,0))
-        }
+        document.getElementById("folderLoad").innerText = `読み込み中[${loaded}/${total}]`
     }
+    document.getElementById("folderLoad").innerText = `読み込み完了[${total}/${total}]`
 
     console.log(music.musics)
 
@@ -694,24 +670,14 @@ class Globals {
 }
 
 class Music {
-    constructor(file,played=0,lastPlayed,json) {
-
-        let fileName = file.name
-
-        if (fileName.includes("%")) {
-            try {
-                fileName = decodeURIComponent(fileName)
-            } catch (e) {
-                console.error(`${fileName}のデコードに失敗しました`)
-            }
-        }
-        fileName = fileName.split(/[\\/]/).pop().replace(/\.[^/.]+$/,"")
-
+    constructor(entry,played=0,lastPlayed,json) {
+        this.entry = entry
+        this.name = entry.name.replace(/\.[^/.]+$./,"")
         this.type = json.type
+        this._objectURL = null
 
         if (this.type === "bgm") {
             this.hour = json.hour
-            this.file = file
         } else if (this.type === "music") {
             this.path = json.path
             this.name = json.name
@@ -728,7 +694,20 @@ class Music {
             this.language = json.language
             this.played = played
             this.lastPlayed = lastPlayed
-            this.file = file
+        }
+    }
+
+    async getURL() {
+        if (this._objectURL) {return this._objectURL}
+        const file = await this.entry.getFile()
+        this._objectURL = URL.createObjectURL(file)
+        return this._objectURL
+    }
+
+    revokeURL() {
+        if (this._objectURL) {
+            URL.revokeObjectURL(this._objectURL)
+            this._objectURL = null
         }
     }
 
@@ -986,29 +965,31 @@ const statics = new Statics()
 
 /*function play*/
 async function play(place,musicFile) {
+    const url = await musicFile.getURL()
+    const lowerName = musicFile.entry.name.toLowerCase()
+    console.log(lowerName)
     if (place === "b") {
-        urlB = URL.createObjectURL(musicFile.file)
-        const lowerName = musicFile.file.name.toLowerCase()
+        musicB = musicFile
         audioB.style.display = "none"
         videoB.style.display = "none"
         audioB.pause()
         videoB.pause()
         const now = newDate()
         if (lowerName.endsWith('.mp3') || lowerName.endsWith('.m4a')) {
-            audioB.src = urlB;
+            audioB.src = url;
             audioB.style.display = 'block';
             changeVolume()
             await audioB.play();
             audioB.currentTime = now.getMinutes()*60+now.getSeconds()+now.getMilliseconds()/1000
         } else if (lowerName.endsWith('.webm') || lowerName.endsWith('.mkv') || lowerName.endsWith(".mp4")) {
-            videoB.src = urlB;
+            videoB.src = url;
             videoB.style.display = 'block';
             changeVolume()
             await videoB.play();
         }
     } else if (place === "m") {
-        urlM = URL.createObjectURL(musicFile.file)
-        const lowerName = musicFile.file.name.toLowerCase()
+        const fileName = musicFile.path.split(/[\\/]/).pop().replace(/\.[^/.]+$/, "")
+        musicM = musicFile
         music.savePlayed(musicFile.path)
         setProperty(musicFile)
         setMetadata(musicFile)
@@ -1016,22 +997,22 @@ async function play(place,musicFile) {
         videoM.style.display = "none"
         audioM.pause()
         videoM.pause()
-        document.getElementById("nowPlaying").textContent = "再生中: " + musicFile.file.name.replace(/\.[^/.]+$/, "");
-        document.title = musicFile.file.name.replace(/\.[^/.]+$/, "")
+        document.getElementById("nowPlaying").textContent = "再生中: " + fileName;
+        document.title = fileName;
         if (lowerName.endsWith('.mp3') || lowerName.endsWith('.m4a')) {
-            audioM.src = urlM;
+            audioM.src = url;
             audioM.style.display = 'block';
             changeVolume()
             await audioM.play();
         } else if (lowerName.endsWith('.webm') || lowerName.endsWith('.mkv') || lowerName.endsWith(".mp4")) {
-            videoM.src = urlM;
+            videoM.src = url;
             videoM.style.display = 'block';
             changeVolume()
             await videoM.play();
         }
     } else if (place === "j") {
-        urlJ = URL.createObjectURL(musicFile.file)
-        const lowerName = musicFile.file.name.toLowerCase()
+        const fileName = musicFile.path.split(/[\\/]/).pop().replace(/\.[^/.]+$/, "")
+        musicJ = musicFile
         music.savePlayed(musicFile.path)
         setProperty(musicFile)
         setMetadata(musicFile)
@@ -1050,15 +1031,15 @@ async function play(place,musicFile) {
         videoJ.style.display = "none"
         audioJ.pause()
         videoJ.pause()
-        document.getElementById("nowPlaying").textContent = "再生中: " + musicFile.file.name.replace(/\.[^/.]+$/, "");
-        document.title = musicFile.file.name.replace(/\.[^/.]+$/, "")
+        document.getElementById("nowPlaying").textContent = "再生中: " + fileName;
+        document.title = fileName;
         if (lowerName.endsWith('.mp3') || lowerName.endsWith('.m4a')) {
-            audioJ.src = urlJ;
+            audioJ.src = url;
             audioJ.style.display = 'block';
             changeVolume()
             await audioJ.play();
         } else if (lowerName.endsWith('.webm') || lowerName.endsWith('.mkv') || lowerName.endsWith(".mp4")) {
-            videoJ.src = urlJ;
+            videoJ.src = url;
             videoJ.style.display = 'block';
             changeVolume()
             await videoJ.play();
@@ -1096,7 +1077,7 @@ function playBGM() {
 }
 
 audioB.onended = videoB.onended = () => {
-    URL.revokeObjectURL(urlB)
+    musicB.revokeURL()
     audioB.style.display = "none";
     videoB.style.display = "none";
     playBGM()
@@ -1104,7 +1085,7 @@ audioB.onended = videoB.onended = () => {
 }
 
 audioM.onended = videoM.onended = () => {
-    URL.revokeObjectURL(urlM)
+    musicM.revokeURL()
     audioM.style.display = "none";
     videoM.style.display = "none";
     haveSetMusic = false
@@ -1114,7 +1095,7 @@ audioM.onended = videoM.onended = () => {
 }
 
 audioJ.onended = videoJ.onended = () => {
-    URL.revokeObjectURL(urlJ)
+    musicJ.revokeURL()
     audioJ.style.display = "none";
     videoJ.style.display = "none";
     haveSetSignal = false
@@ -1128,7 +1109,9 @@ function resetIdleTimer() {
     if (isInSleepMode) {
         document.getElementById("sleepModeMessage").innerText = "休止モードは無効です"
         isInSleepMode = false
-        setSignal()
+        if (document.getElementById("timeSignalBool").checked) {
+            setSignal()
+        }
         playMusic()
         clearTimeout(idleTimer)
         idleTimer = setTimeout(activateIdleMode,Number(document.getElementById("sleepModeInput").value)*60*1000)
@@ -1257,45 +1240,46 @@ function getSpeed() {
     }
 }
 
+function isPlayingM() {
+    const videoM_Display = window.getComputedStyle(videoM).display
+    const audioM_Display = window.getComputedStyle(audioM).display
+    if (videoM_Display === "block" || audioM_Display === "block") {
+        return true
+    }else {
+        return false
+    }
+}
+
+function isPlayingJ() {
+    const videoJ_Display = window.getComputedStyle(videoJ).display
+    const audioJ_Display = window.getComputedStyle(audioJ).display
+    if (videoJ_Display === "block" || audioJ_Display === "block") {
+        return true
+    } else {
+        return false
+    }
+}
+
 function setMetadata(music) {
     if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
             title: music.name,
             artist: music.cover,
             artwork: [{ src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' }]
-    });
-
-    const videoM_Display = window.getComputedStyle(videoM).display
-    const audioM_Display = window.getComputedStyle(audioM).display
-    const videoJ_Display = window.getComputedStyle(videoJ).display
-    const audioJ_Display = window.getComputedStyle(audioJ).display
-
-    let mPlaying
-    let jPlaying
-
-    if (videoM_Display === "block" || audioM_Display === "block") {
-        mPlaying = true
-    }else {
-        mPlaying = false
-    }
-
-    if (videoJ_Display === "block" || audioJ_Display === "block") {
-        jPlaying = true
-    } else {
-        jPlaying = false
+        });
     }
 
         // 再生・一時停止ボタンをシステムと連携させる
     navigator.mediaSession.setActionHandler('play', () => {
-        if (mPlaying) {audioM.play();videoM.play();}
-        if (jPlaying) {audioJ.play();videoJ.play();}
+        if (isPlayingM()) {audioM.play();videoM.play();}
+        if (isPlayingJ()) {audioJ.play();videoJ.play();}
     });
     navigator.mediaSession.setActionHandler('pause', () => {
-        if (mPlaying) {audioM.pause();videoM.pause();}
-        if (jPlaying) {audioJ.pause();videoJ.pause();}
+        if (isPlayingM()) {audioM.pause();videoM.pause();}
+        if (isPlayingJ()) {audioJ.pause();videoJ.pause();}
     });
 }
-}
+
 
 document.getElementById("muteCheckBox").addEventListener("click",function() {
     document.getElementById("muteCheckBox").checked ? changeVolume(0) : changeVolume(Number(document.getElementById("volumeInput").value))
