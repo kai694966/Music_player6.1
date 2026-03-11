@@ -997,8 +997,8 @@ async function play(place,musicFile) {
         videoM.style.display = "none"
         audioM.pause()
         videoM.pause()
-        document.getElementById("nowPlaying").textContent = "再生中: " + fileName;
-        document.title = fileName;
+        document.getElementById("nowPlaying").textContent = "再生中: " + musicFile.path;
+        document.title = musicFile.path;
         if (lowerName.endsWith('.mp3') || lowerName.endsWith('.m4a')) {
             audioM.src = url;
             audioM.style.display = 'block';
@@ -1017,13 +1017,13 @@ async function play(place,musicFile) {
         setProperty(musicFile)
         setMetadata(musicFile)
         const now = newDate()
-        if (now.getMinutes() === 0) {
+        if (musicFile.signal.slice(2,4) === "00") {
             playBeep("C6")
-        } else if (now.getMinutes() === 15) {
+        } else if (musicFile.signal.slice(2,4) === "15") {
             playBeep("C5")
-        } else if (now.getMinutes() === 30) {
+        } else if (musicFile.signal.slice(2,4) === "30") {
             playBeep("E5")
-        } else if (now.getMinutes() === 45) {
+        } else if (musicFile.signal.slice(2,4) === "45") {
             playBeep("G5")
         }
 
@@ -1031,8 +1031,8 @@ async function play(place,musicFile) {
         videoJ.style.display = "none"
         audioJ.pause()
         videoJ.pause()
-        document.getElementById("nowPlaying").textContent = "再生中: " + fileName;
-        document.title = fileName;
+        document.getElementById("nowPlaying").textContent = "再生中: " + musicFile.name;
+        document.title = musicFile.name;
         if (lowerName.endsWith('.mp3') || lowerName.endsWith('.m4a')) {
             audioJ.src = url;
             audioJ.style.display = 'block';
@@ -1145,7 +1145,7 @@ function setProperty(music) {
 
 }
 
-function playMusic() {
+async function playMusic() {
     /*
 　天候ブーストでその曲が任意の倍率選ばれやすくなる
 音楽のランダム再生システムの修正
@@ -1199,13 +1199,19 @@ function playMusic() {
             }
     }
 
-    let shortMusic = music.getMusicByTimeToSignal(noSignalMusic)
+    let shortMusic = noSignalMusic
+
+    if (document.getElementById("timeSignalBool").checked) {
+        shortmusic = music.getMusicByTimeToSignal(noSignalMusic)
+    }
+
     if (shortMusic.length === 0) {
         //時報までの時間が短いので曲がない
     }　else {
         const playMusic = music.chooseMusic(shortMusic)
         const betweenSong = Number(document.getElementById("betweenSong").value)
         console.debug(`次に再生:${playMusic.name},${betweenSong}秒後`)
+        await playMusic.getURL()
         setTimeout(play,betweenSong*1000,"m",playMusic)
         haveSetMusic = true
     }
