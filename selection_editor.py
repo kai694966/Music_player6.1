@@ -4,7 +4,7 @@ import psycopg2
 import os
 
 QUERY = """
-SELECT name, signal_time, selection FROM public.tracks WHERE NOT (selection @> ARRAY['v6.1-a']) ORDER BY name ASC
+SELECT path_audio, signal_time, selection FROM public.tracks ORDER BY duration ASC
 """
 
 # データベース接続設定
@@ -17,6 +17,7 @@ DB_CONFIG = {
 }
 
 def update_selection():
+    
     # 1. GUIで選択された行を取得
     selected_item = tree.selection()
     if not selected_item:
@@ -41,12 +42,12 @@ def update_selection():
             query = """
             UPDATE public.tracks 
             SET selection = array_append(selection, %s)
-            WHERE name = %s AND NOT (selection @> ARRAY[%s]);
+            WHERE path_audio = %s AND NOT (selection @> ARRAY[%s]);
             """
             cur.execute(query, (add_text, track_id, add_text))
         
         conn.commit()
-        messagebox.showinfo("成功", f"'{add_text}' を追加しました")
+        #messagebox.showinfo("成功", f"'{add_text}' を追加しました")
         load_data() # 一覧をリフレッシュ
         
     except Exception as e:
@@ -81,7 +82,7 @@ btn_update = tk.Button(frame_top, text="選択行を更新", command=update_sele
 btn_update.pack(side=tk.LEFT)
 
 # データ一覧表示 (Treeview)
-columns = ("name", "signal_time", "selection")
+columns = ("path_audio", "signal_time", "selection")
 tree = ttk.Treeview(root, columns=columns, show='headings')
 for col in columns:
     tree.heading(col, text=col)

@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-31</p>
+<p>v6.1 β-32</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -794,9 +794,10 @@ class MusicManager {
         const timeToSignal = nextSignal-now
 
         const betweenSong = Number(document.getElementById("betweenSong").value)*1000
+        const leastToSignal = Number(document.getElementById("leastToSignal").value)*1000
 
         const _musics = this.getMusicByType("music",false,musics)
-        const result = _musics.filter(music => music.duration + betweenSong + 1000 < timeToSignal)
+        const result = _musics.filter(music => music.duration + betweenSong + leastToSignal < timeToSignal)
         return result
     }
 
