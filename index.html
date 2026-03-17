@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-32</p>
+<p>v6.1 β-33</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -1203,7 +1203,7 @@ async function playMusic() {
     let shortMusic = noSignalMusic
 
     if (document.getElementById("timeSignalBool").checked) {
-        shortmusic = music.getMusicByTimeToSignal(noSignalMusic)
+        shortMusic = music.getMusicByTimeToSignal(noSignalMusic)
     }
 
     if (shortMusic.length === 0) {
