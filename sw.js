@@ -1,14 +1,14 @@
-const CACHE_NAME = "36";
+const CACHE_NAME = "37";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
   "./manifest.json",
-  "./SE/C5Beep.wav",
-  "./SE/C6Beep.wav",
-  "./SE/E5Beep.wav",
-  "./SE/G5Beep.wav",
-  "./icons/icon-512.png",
-  "./icons/icon-192.png",
+  "SE/C5Beep.wav",
+  "SE/C6Beep.wav",
+  "SE/E5Beep.wav",
+  "SE/G5Beep.wav",
+  "icons/icon-512.png",
+  "icons/icon-192.png",
 ];
 
 // インストール（キャッシュ）
