@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-34</p>
+<p>v6.1 β-35</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -830,22 +830,22 @@ class MusicManager {
                 undefined
             } else 
             if (weather === "Clear" && music.weather.includes("Clear")) {
-                for (let i=0;i<2;i++) {
+                for (let i=0;i<4;i++) {
                     list.push(music)
                 }
             } else
             if (weather === "Clouds" && music.weather.includes("Clouds")) {
-                for (let i=0;i<2;i++) {
+                for (let i=0;i<4;i++) {
                     list.push(music)
                 }
             } else
             if (weather === "Rain" && music.weather.includes("Rain")) {
-                for (let i=0;i<5;i++) {
+                for (let i=0;i<10;i++) {
                     list.push(music)
                 }
             } else 
             if (weather === "Snow" && music.weather.includes("Snow")) {
-                for (let i=0;i<10;i++) {
+                for (let i=0;i<20;i++) {
                     list.push(music)
                 }
             } else {
