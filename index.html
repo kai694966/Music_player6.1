@@ -1244,7 +1244,7 @@ function setSignal() {
     const now = newDate()
     const timeToSignal = time - now
 
-    setTimeout(play,timeToSignal,"j",nextSignal.music)
+    setTimeout(play,timeToSignal+80,"j",nextSignal.music)
     haveSetSignal = true
 }
 
