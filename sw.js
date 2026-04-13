@@ -1,8 +1,9 @@
-const CACHE_NAME = "33";
+const CACHE_NAME = "34";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
   "./manifest.json",
+  "./SE",
 ];
 
 // インストール（キャッシュ）

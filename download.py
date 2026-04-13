@@ -39,8 +39,8 @@ class download:
             cur = conn.cursor()
 
             sql = """
-            INSERT INTO tracks (type,path_original,path_480p,path_audio,name,source,duration)
-            VALUES(%s,%s,%s,%s,%s,%s,%s)
+            INSERT INTO tracks (type,path_original,path_480p,path_audio,name,source,duration,selection)
+            VALUES(%s,%s,%s,%s,%s,%s,%s,%s)
             ON CONFLICT (source) DO NOTHING;
             """
 
@@ -53,7 +53,8 @@ class download:
                 file_paths["audio"],
                 safe_title,
                 str(url),
-                self.get_duration(file_paths["orig"])
+                self.get_duration(file_paths["orig"]),
+                ["new"]
             )
             cur.execute(sql,data)
             conn.commit()
@@ -233,6 +234,8 @@ class download:
         check = input("ダウンロード中のファイルがないことを確認してください\n>>")
 
         check = input(f"ダウンロード先のDBが正しいか確認してください\n[{config['dbname']}]>>")
+
+        check = input("ダウンロード先のディスクが接続されていることを確認してください\n>>")
 
         self.read_urls()
         length = len(self.urls)

@@ -4,15 +4,19 @@ import os
 import winsound
 import time
 
-target_file = "download_url.txt"
+txtfile = "download_url.txt"
 
-def watch_clipboard():
+def watch_clipboard(target_file="download_url.txt"):
     i = 0
     existing_links = set()
     if os.path.exists(target_file):
         with open(target_file,"r",encoding="utf-8") as f:
-            existing_links = set(line.strip() for line in f if line.strip()
-                                 )
+            existing_links = set(line.strip() for line in f if line.strip())
+    if len(existing_links) == 0:
+        print("downlaod_url.txtには何も書かれていません")
+    else:
+        print(f"{len(existing_links)}件のリンクがdownload_url.txtにあります")
+    input = ("開始しますか？")
     winsound.Beep(440,500)
     time.sleep(1)
     winsound.Beep(440,500)
@@ -61,4 +65,4 @@ def watch_clipboard():
 
 
 if __name__ == "__main__":
-    watch_clipboard()
+    watch_clipboard(txtfile)

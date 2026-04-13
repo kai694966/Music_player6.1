@@ -6,6 +6,8 @@ import re
 import download
 import output
 import subprocess
+import initDb
+import download_url_writer
 
 
 config = {
@@ -59,7 +61,7 @@ def create_tables():
             registered char(8),
             volume_offset INTEGER DEFAULT 0,
             duration INTEGER,
-            source TEXT,
+            source TEXT UNIQUE,
             language char(10) DEFAULT 'ja',
             hour INTEGER,
             selection TEXT[] DEFAULT '{}'
@@ -537,7 +539,7 @@ def get_duration(path):
 
 if __name__ == "__main__":
 
-    mode = input("\n\n1.メタデータが入力されていない部分のみ入力する\n2.データを出力する\n3.時間帯や天気から曲を検索する\n4.ダウンロードする\n>>")
+    mode = input("\n\n1.メタデータが入力されていない部分のみ入力する\n2.データを出力する\n3.psqlのテーブル作成、csvから読み込み\n4.ダウンロードする\n5.ダウンロードするリンクを監視する\n>>")
     mode = int(mode)
     if mode == 1:
         create_tables()
@@ -545,7 +547,10 @@ if __name__ == "__main__":
     elif mode == 2:
         output.output()
     elif mode == 3:
-        pass
+        create_tables()
+        initDb.initDb()
     elif mode == 4:
         create_tables()
         download.download(input("出力先のフォルダを指定\n['E:\Music\MusicPlayerStorage61']\n>>") or 'E:\Music\MusicPlayerStorage61')#output_pathにダウンロードを開始
+    elif mode == 5:
+        download_url_writer.watch_clipboard()

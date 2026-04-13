@@ -5,7 +5,6 @@ from psycopg2.extras import RealDictCursor
 import shutil
 import sys
 
-
 config = {
     "dbname":"musicplayer61",
     "user":"postgres",
@@ -17,8 +16,9 @@ config = {
 #Setings.pyにはこれが出力される
 setting = {"sceneSelect":True,"timeSignal":True,"bgm":False,"sceneSelectRange":5,"timezone":9,"betweenSong":1000,"leastToSignal":10000,"leastPlayed":"2","timeBetweenPlay":"30"}
 
-filter_command = "SELECT * FROM tracks WHERE selection @> ARRAY['v6.1-a'] ORDER BY id;"
-
+##################################
+filter_command = "SELECT * FROM tracks WHERE selection @> ARRAY['v6.1-a'] and cover = 'MIMI' ORDER BY id;"
+##################################
 
 """
 SELECT * FROM tracks WHERE (name,signal,coverなど) = '(ほしい文字列など)'
@@ -63,6 +63,7 @@ class output():
             query = filter_command
 
             print(f"実行するクエリ\n{query}")
+            print("output.py ln20で変えられるよ")
 
             cur.execute(query)
             rows = cur.fetchall()

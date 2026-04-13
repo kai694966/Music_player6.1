@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-33</p>
+<p>v6.1 β-34</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -33,7 +33,7 @@
 
 <button onclick="settingDialog.showModal()" id="configSettings">設定</button>
 
-<dialog id="settingDialog">
+<dialog id="settingDialog" class="dialog">
     <input type="checkbox" id="sceneSelectBool">
     <label for="sceneSelectBool">SceneSelect</label>
     <br>
@@ -127,7 +127,7 @@
 
 <button onclick="fileDialog.showModal()" id="showProperty">動画/音声のプロパティを表示</button>
 
-<dialog id="fileDialog">
+<dialog id="fileDialog" class="dialog">
     <h2 id="pathDialog">path:</h2>
     <p id="nameDialog">name:</p>
     <p id="coverDialog">cover:</p>
@@ -170,9 +170,12 @@ dialog::backdrop {
 }
 
 
+
     </style>
 
     <script>
+
+
 
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')
@@ -289,6 +292,24 @@ function onStarted() {
 
 }
 /**/
+
+document.querySelectorAll("dialog").forEach(dialog => {
+    dialog.addEventListener("click",(event => {
+        if (event.target === dialog) {
+            const rect = dialog.getBoundingClientRect()
+            const isInDialog = (
+                rect.top <= event.clientY && 
+                event.clientY <= rect.top * rect.height &&
+                rect.left <= event.clientX &&
+                event.clientX <= rect.left + rect.width
+            )
+
+            if (!isInDialog) {
+                dialog.close();
+            }
+        }
+    }))
+})
 
 /*jsonの保存*/
 async function saveSetting() {
@@ -518,7 +539,6 @@ readFolder.addEventListener("click",async function() {/*ファイルを読み込
 
             if (permission === "granted" || await data.handle.requestPermission({mode: "read" }) === "granted") {
                 const entries = await getAllFiles(data.handle)
-                console.log(entries)
                 load(entries)
                 document.getElementById("folderLoad").innerText = `読み込み完了:${data.handle.name}`
                 showAfterInput()
@@ -609,7 +629,6 @@ async function load(entries) {
     const total = musicEntry.length
 
     for (const {entry,newPath} of musicEntry) {
-        console.log(entry,newPath)
         const fileName = newPath.split(/[\\/]/).pop().replace(/\.[^/.]+$/, "")
         const d = playedMap.get(fileName)
         const json = staticsMap.get(fileName)
@@ -623,8 +642,6 @@ async function load(entries) {
         document.getElementById("folderLoad").innerText = `読み込み中[${loaded}/${total}]`
     }
     document.getElementById("folderLoad").innerText = `読み込み完了[${total}/${total}]`
-
-    console.log(music.musics)
 
     onFileLoaded()
 }
@@ -968,7 +985,7 @@ const statics = new Statics()
 async function play(place,musicFile) {
     const url = await musicFile.getURL()
     const lowerName = musicFile.entry.name.toLowerCase()
-    console.log(lowerName)
+
     if (place === "b") {
         musicB = musicFile
         audioB.style.display = "none"
@@ -1032,8 +1049,8 @@ async function play(place,musicFile) {
         videoJ.style.display = "none"
         audioJ.pause()
         videoJ.pause()
-        document.getElementById("nowPlaying").textContent = "再生中: " + musicFile.name;
-        document.title = musicFile.name;
+        document.getElementById("nowPlaying").textContent = "再生中: " + musicFile.path;
+        document.title = musicFile.path;
         if (lowerName.endsWith('.mp3') || lowerName.endsWith('.m4a')) {
             audioJ.src = url;
             audioJ.style.display = 'block';
@@ -1198,6 +1215,8 @@ async function playMusic() {
                 console.error("時報までの時間がある曲がありません")
                 noSignalMusic = unPlayedMusic
             }
+    } else {
+        noSignalMusic = unPlayedMusic
     }
 
     let shortMusic = noSignalMusic
@@ -1232,7 +1251,7 @@ function setSignal() {
 function getWeather() {
     if (document.getElementById("weatherInternet").checked) {
         //インターネットから天気を取得
-        console.log("インターネットから天気を取得する部分が未完")
+        console.log("インターネットから天気を取得する部分が未完 v6.2")
         return "None"
     } else {
         return ["None","Clear","Clouds","Rain","Snow"][Number(document.getElementById("weatherInput").value)]
