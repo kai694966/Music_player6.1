@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-37</p>
+<p>v6.1 β-38</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -1077,7 +1077,7 @@ async function playBeep(freq) {
     const fileURL = `SE/${freq}Beep.wav`
     try {
         if (!cachedAudioBlobs[freq]) {
-            const responce = await fetch(fileURL)
+            const response = await fetch(fileURL)
             if (!response.ok) throw new Error("Fetch failed")
 
             const blob = await response.blog()
@@ -1089,8 +1089,8 @@ async function playBeep(freq) {
         await audioSE.play()
     } catch (e) {
         console.log(`Error[${freq}]:${e}`)
-        audioSE.src - fileURL
-        audioSE.play().chatch(err => console.error(err))
+        audioSE.src = fileURL
+        audioSE.play().catch(err => console.error(err))
     }
 
 }
