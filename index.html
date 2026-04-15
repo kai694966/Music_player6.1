@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-38</p>
+<p>v6.1 β-39</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -1255,9 +1255,10 @@ function setSignal() {
     const now = newDate()
     const timeToSignal = time - now
 
-    setTimeout(play,timeToSignal+80,"j",nextSignal.music)
+    setTimeout(play,timeToSignal+800,"j",nextSignal.music)
     haveSetSignal = true
 }
+
 
 function getWeather() {
     if (document.getElementById("weatherInternet").checked) {
