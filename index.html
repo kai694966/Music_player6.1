@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-39</p>
+<p>v6.1 β-40</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -1080,7 +1080,7 @@ async function playBeep(freq) {
             const response = await fetch(fileURL)
             if (!response.ok) throw new Error("Fetch failed")
 
-            const blob = await response.blog()
+            const blob = await response.blob()
             cachedAudioBlobs[freq] = URL.createObjectURL(blob)
         }
 
