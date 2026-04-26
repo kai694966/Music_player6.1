@@ -14,10 +14,10 @@ config = {
 }
 
 #Setings.pyにはこれが出力される
-setting = {"sceneSelect":True,"timeSignal":True,"bgm":False,"sceneSelectRange":5,"timezone":9,"betweenSong":1000,"leastToSignal":10000,"leastPlayed":"2","timeBetweenPlay":"30"}
+setting = {"sceneSelect":True,"timeSignal":True,"bgm":True,"sceneSelectRange":0,"timezone":9,"betweenSong":3000,"leastToSignal":10000,"leastPlayed":"2","timeBetweenPlay":"30"}
 
 ##################################
-filter_command = "SELECT * FROM tracks WHERE selection @> ARRAY['v6.1-a'] and cover = 'MIMI' ORDER BY id;"
+filter_command = "SELECT * FROM tracks WHERE selection @> ARRAY['v6.1-c'] ORDER BY id;"
 ##################################
 
 """
@@ -38,10 +38,16 @@ SELECT * FROM tracks WHERE (name,signal,coverなど) = '(ほしい文字列な�
 class output():
     def __init__(self):
 
-        while True:
-            self.output_path = input("出力する先のファイルは\n>>")
-            if os.path.exists(self.output_path):
-                break
+        folder_name = input("出力するフォルダの\"名前\"は\n>>")
+
+        self.output_path = input(f"出力する先のファイルは\nその中に{folder_name}が作られる\n>>")
+        self.output_path = os.path.join(self.output_path,folder_name)
+
+        os.makedirs(self.output_path,exist_ok=True)
+
+
+        print(self.output_path)
+            
 
         
         self.quality = input("音声ファイルの質は？\n1.original\n2.480p\n3.audio only\n>>")
@@ -50,6 +56,8 @@ class output():
         self.quality = ["path_original","path_480p","path_audio"][self.quality-1]
 
         input(f"query:{filter_command}\n>>")
+
+        check = input("出力する前と後のドライブはささってる？\n>>")
         
 
         self.start_output()
@@ -120,11 +128,17 @@ class output():
             }
 
             new_time = []
+            #print(row)
             for data in row["time"]:
                 if data in time_list:
                     new_time+=time_list.get(data)
                 else:
-                    new_time.append(int(data))
+                    try:
+                        new_time.append(int(data))
+                    except ValueError as e:
+                        print(e)
+                        print(row)
+                        print(1/0)
 
             return {
                 "type":"music",

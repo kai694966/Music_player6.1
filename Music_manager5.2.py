@@ -465,7 +465,14 @@ def name_suggestion(path):
     elif "／ 宵-Yoi Cover" in path:
         name = path.split("(")[0]
         cover = "宵"
-        original = "".join(path.split("（")[1]).split("）")[0]
+        try:
+            original = "".join(path.split("（")[1]).split("）")[0]
+        except IndexError:
+            try:
+                original = "".join(path.split("(")[1]).split(")")[0]
+            except Exception:
+                original = "Unknown"
+
 
     elif "Kotoha" in path:
         name = path.split(" ")[0]
