@@ -10,7 +10,7 @@
 
     <body>
 
-<p>v6.1 β-41</p>
+<p>v6.1 β-42</p>
 
 <button id="readFolder">ファイルを読み込む</button>
 <button id="selectFolder">読み込み先:</button>
@@ -171,6 +171,8 @@
     <button onclick="weatherDetailDialog.close()">close</button>
 </dialog>
 
+<button id="setApiKey">APIキーを設定する</button>
+
     </body>
 
     <style>
@@ -293,6 +295,7 @@ function onFileLoaded() {
     document.getElementById("startButton").disabled = false
     document.getElementById("weatherInternet").disabled = false
     document.getElementById("weatherInput").disabled = true
+    document.getElementById("setApiKey").style.display = "none"
 
 }
 
@@ -1333,6 +1336,14 @@ async function getApiKey() {
     return apiKey
 }
 
+document.getElementById("setApiKey").addEventListener("click",async function() {
+    apiKey = prompt("OpenWeatherのAPIキー")
+    await db.save("openWeather",{
+        apiKey:"key",
+        value:apiKey
+    })
+})
+
 function showWeatherDetail(data) {
     if (!data) return;
 
@@ -1381,7 +1392,7 @@ function showWeatherDetail(data) {
         `weather: id:${data.weather?.[0]?.id}, ` +
         `main:${data.weather?.[0]?.main}, ` +
         `description:${data.weather?.[0]?.description}, ` +
-        `icon:<a href="${iconUrl}" target="_blank" style="color: #007bff; text-decoration: underline;">${weatherIcon}</a>`;
+        `icon:<a href="${iconUrl}" target="_blank" rel="noopener noreferrer" style="color: #007bff; text-decoration: underline;">${weatherIcon}</a>`;
 
     
 
